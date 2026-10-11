@@ -8,9 +8,9 @@
   --l1:#17803D; --l2:#A86B10; --l3:#7350E6;
   --pi-bg:#F6F7FE; --pi-head:#E7EAFB; --pi-line:#C3CAF2; --pi-ink:#2A3BB8;
   --code-bg:#1B2430; --code-ink:#DCE3EC; --code-dim:#7D8BA0; --code-hl:#2D3B55; --code-k:#C3A6FF; --code-s:#9BD48E;
-  --f-display:"Noto Serif SC","Songti SC","SimSun",serif;
-  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+  --f-display:"Songti SC","Noto Serif CJK SC","Source Han Serif SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --f-body:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC","WenQuanYi Micro Hei",system-ui,sans-serif;
+  --f-mono:ui-monospace,"SF Mono",Menlo,"Cascadia Mono",Consolas,"DejaVu Sans Mono","Liberation Mono",monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0E1319; --surface:#151C24; --sunk:#1B242E; --ink:#E4E9EF; --muted:#93A1B2; --line:#283340;
