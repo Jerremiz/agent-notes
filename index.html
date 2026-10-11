@@ -23,8 +23,8 @@
   <h1>看懂 Agent</h1>
   <p class="hero-deck">词会过时，问题不会</p>
   <div class="hero-lead">
-    <p>这几年 agent 领域造了很多词：function calling、RAG、MCP、Skills、tool search、context engineering、harness engineering……它们看起来各不相同，其实在回答同一组问题。这组问题来自模型本身的几条硬约束。约束不变，问题就不变。</p>
-    <p style="margin-top:.8em">这本手册先把这组问题讲清楚，再逐章拆开，并对照开源 coding agent <b style="color:var(--ink);font-weight:500">pi</b> 的实现，看一个真实系统怎么回答每一个问题。读完的目标是：下一个新词出来时，你能很快说出它是哪个老问题的新解法，又换了哪一个维度。</p>
+    <p>这几年 agent 领域造了很多词：function calling、RAG、MCP、Skills、tool search、context engineering、harness engineering……它们看起来各不相同，大多却在回答同一组问题。这组问题来自当前主流模型及其调用方式的几条工程约束。约束还在，问题就还在。</p>
+    <p style="margin-top:.8em">这本手册从后端工程的视角来讲 <b style="color:var(--ink);font-weight:500">coding agent</b>：先把这组问题讲清楚，再逐章拆开，并对照开源 coding agent <b style="color:var(--ink);font-weight:500">pi</b> 的实现，看一个真实系统怎么回答每一个问题。读完的目标是：下一个新词出来时，你能很快判断它主要在回答哪个老问题、换了哪一个维度；放不进去的，再当作真正的新东西细看。</p>
   </div>
   <nav class="parts" aria-label="三个部分">
     <a href="part1.html"><span class="pn">01–09</span><b>原理</b><span class="pd">模型从哪来、工具调用、循环、上下文、记忆、多 agent</span></a>
@@ -32,11 +32,12 @@
     <a href="part3.html"><span class="pn">17–19</span><b>综合</b><span class="pd">系统设计、动手项目、速记自测，附 pi 源码地图</span></a>
   </nav>
   <dl class="howread">
+    <div><dt>推荐路线</dt><dd>第一遍先跑通闭环：<a href="part1.html#c1">1</a> → <a href="part1.html#c3">3</a> → <a href="part1.html#c4">4</a> → <a href="part1.html#c5">5</a> → <a href="part1.html#c7">7</a>，再回头读 <a href="part1.html#c2">第 2 章</a>看能力从哪来。第 9 章的长任务、第 10 章的状态恢复、第 14 章的可靠性讲的是同一条线（怎么跨故障接着干），建议连读。</dd></div>
     <div><dt>先读这页</dt><dd>下面的“怎么学”和“本质地图”是全书的骨架。每章开头标着它 <span class="qchip">回答</span> 哪几个问题，点一下回到地图里对应的那一行。</dd></div>
     <div><dt>三层深度</dt><dd>每章的小节标了 <span class="lv l1">基础</span> <span class="lv l2">进阶</span> <span class="lv l3">深入</span>。第一遍只看基础，第二遍补进阶，深入部分对着源码读。</dd></div>
     <div><dt>名词卡</dt><dd>每个关键名词第一次出现时有一张可展开的 <b style="color:var(--r-system)">词</b> 卡。先看“本质”一行：它属于哪个问题、方案在哪一层；下面是它的来历和现状。状态分为 <span class="st hot">正流行</span> <span class="st infra">已成标配</span> <span class="st absorbed">已练进模型</span> <span class="st stable">稳定</span> <span class="st debate">仍在演变</span> <span class="st gone">已淘汰</span>。</dd></div>
-    <div><dt>pi 的做法</dt><dd>对照 pi 源码的区块默认折叠，只显示一行结论。源码有效时间短，需要时再展开；源码地图在附录。</dd></div>
-    <div><dt>前瞻</dt><dd>每章末尾的紫色 <b style="color:var(--r-system)">前瞻</b> 框讲这一章的内容接下来会怎么变，并标出把握程度：<span class="cf sure">确定</span> 已有多家工程实践验证；<span class="cf likely">大概率</span> 方向明确但还在推进；<span class="cf open">有争议</span> 业内仍有分歧。</dd></div>
+    <div><dt>pi 的做法</dt><dd>对照 pi 源码的区块默认折叠，只显示一行结论。源码有效时间短，需要时再展开。文中的路径对应 pi 的 commit <a href="https://github.com/earendil-works/pi/tree/cdaf6c227d4718a72b59ccd02152c9614df44cfc" target="_blank" rel="noopener"><code>cdaf6c2</code></a>（2026-10-11），源码地图在<a href="part3.html#px">附录</a>。</dd></div>
+    <div><dt>前瞻</dt><dd>每章末尾的紫色 <b style="color:var(--r-system)">前瞻</b> 框把“现在是什么样”和“接下来会怎么变”分开标注：<span class="cf sure">已有证据</span> 描述现状，有一手资料或多家产品实践支持（不代表它会一直成立）；<span class="cf likely">作者判断</span> 根据现有迹象做的推测；<span class="cf open">有争议</span> 业内仍有分歧，或证据还不够。</dd></div>
     <div><dt>先答再看</dt><dd>每章末尾的问答默认折叠。先自己讲一遍，再展开对照要点和“再深一步”。</dd></div>
   </dl>
 </header>
@@ -47,22 +48,26 @@
   <p class="lead">新词出得比人学得快，追着词学会越学越乱；先抓住约束和问题，新词就只是老问题的新解法。</p>
 
   <h3><span class="step">1</span>先学约束，再学方案</h3>
-  <p>模型有几条硬约束。agent 里的每一个技巧，都是在应对其中一条：</p>
-  <ul class="cons">
-    <li><span>只产出 token，自己什么也不执行</span><span class="to"><a class="qchip" href="#q1">① 动手</a></span></li>
-    <li><span>窗口有限，内容越长用得越差，每个 token 都要付钱</span><span class="to"><a class="qchip" href="#q2">② 上下文</a><a class="qchip" href="#q5">⑤ 分工</a></span></li>
-    <li><span>无状态，每次请求都从零读起</span><span class="to"><a class="qchip" href="#q3">③ 状态</a></span></li>
-    <li><span>看不到训练之外的系统和数据</span><span class="to"><a class="qchip" href="#q4">④ 连接</a></span></li>
-    <li><span>输出是概率性的，会自信地出错</span><span class="to"><a class="qchip" href="#q6">⑥ 验证</a></span></li>
-    <li><span>无法可靠区分指令和数据；模型和外部服务都会失败</span><span class="to"><a class="qchip" href="#q7">⑦ 防护</a></span></li>
-  </ul>
-  <p>约束一松动，就能预测哪些方案会变。窗口从几千涨到百万 token，“塞不下”这个问题弱了，于是有人说“RAG 已死”；但“越长越不准”和“按 token 付钱”没变，所以上下文还是要调度，只是压缩来得更晚。反过来，看到一个新技巧，先找它在应对哪条约束。找不到的，多半只是换了个说法。</p>
+  <p>主流模型（以及调用它们的方式）有几条硬约束。它们的来源不同，有的来自训练目标，有的来自架构，有的来自推理接口和部署预算（<a href="part1.html#c2">第 2 章</a>）。agent 里的大多数技巧，都在应对其中一条或几条。每条约束都会逼出一个工程问题，下表左边是问题，右边是逼出它的约束：</p>
+  <div class="tbl"><table>
+    <thead><tr><th>要回答的问题</th><th>来自哪条约束</th></tr></thead>
+    <tbody>
+      <tr><td><a class="qchip" href="#q1">① 动手</a> 模型的输出怎么变成动作？</td><td>模型只产出 token，自己什么也不执行</td></tr>
+      <tr><td><a class="qchip" href="#q2">② 上下文</a> 每一轮放什么进上下文？</td><td>窗口有限，内容越长用得越差，每个 token 都要付钱</td></tr>
+      <tr><td><a class="qchip" href="#q3">③ 状态</a> 上下文之外存什么，怎么接回来？</td><td>模型无状态，每次请求都从零读起</td></tr>
+      <tr><td><a class="qchip" href="#q4">④ 连接</a> 外部系统和能力怎么接进来？</td><td>模型看不到训练之外的系统和数据</td></tr>
+      <tr><td><a class="qchip" href="#q5">⑤ 分工</a> 工作怎么拆，流程由谁决定？</td><td>一个上下文装不下所有东西，一条循环串行又太慢</td></tr>
+      <tr><td><a class="qchip" href="#q6">⑥ 验证</a> 怎么知道做对了？</td><td>输出是概率性的，会自信地出错</td></tr>
+      <tr><td><a class="qchip" href="#q7">⑦ 防护</a> 出错或被攻击时怎么控制损失？</td><td>模型无法可靠区分指令和数据；模型和外部服务都会失败</td></tr>
+    </tbody>
+  </table></div>
+  <p>约束一松动，就能预测哪些方案会变。窗口从几千涨到百万 token，“塞不下”这个问题弱了，于是有人说“RAG 已死”；但“越长越不准”和“按 token 付钱”没变，所以上下文还是要调度，只是压缩来得更晚。反过来，看到一个新技巧，先找它在应对哪条约束。找不到的，可能只是换了个说法，也可能真是新问题，值得细看。</p>
 
   <h3><span class="step">2</span>七个问题，一张地图</h3>
-  <p>从这些约束推出七个不变的问题，就是下面<a href="#map">本质地图</a>的七行。地图最上面还有一行 ⓪“总称”，放的是 agent、harness engineering 这类给整件事起名字的词。第一次看地图，只看每行的“区分只看”：同一行里的词，差别基本都落在这一个维度上。比如第 ② 行，RAG、AGENTS.md、Skills、tool search 的差别只在“放进来的是什么、常驻还是按需、谁去找”。</p>
+  <p>上表的七个问题，就是下面<a href="#map">本质地图</a>的七行。地图最上面还有一行 ⓪“总称”，放的是 agent、harness engineering 这类给整件事起名字的词。七个问题是导航用的分类，不是严格的划分：有的词同时碰到好几个问题，地图只把它放在最主要的那一行。第一次看地图，只看每行的“区分只看”：同一行里的词，差别大多落在这一个维度上。比如第 ② 行，RAG、AGENTS.md、Skills、tool search 的差别只在“放进来的是什么、常驻还是按需、谁去找”。</p>
 
-  <h3><span class="step">3</span>方案住在哪一层</h3>
-  <p>同一个问题的解法，可以放在五个地方。越往后，越不需要你自己写：</p>
+  <h3><span class="step">3</span>方案放在哪里</h3>
+  <p>同一个问题的解法，常落在下面五个位置。越往后，越不需要你自己写：</p>
   <div class="layersbar">
     <div><b>提示词</b><span>写在 system prompt 里的规则和模板</span></div>
     <div><b>harness 代码</b><span>循环、工具、压缩、权限</span></div>
@@ -70,27 +75,28 @@
     <div><b>厂商 API</b><span>缓存、服务端压缩、tool search</span></div>
     <div><b>模型权重</b><span>工具调用、推理、编辑格式</span></div>
   </div>
-  <p>很多“新东西”只是老方案换了一层。ReAct 的“想、做、看”被训练进了推理模型，提示词模板不再是必需；压缩从 harness 代码搬进了厂商 API；各家的规则文件统一成了 AGENTS.md；各家的“技能目录”统一成了 Skills 规范。方向只有两种：<b>交出去</b>（交给厂商或模型来做）和<b>统一</b>（各家的私有做法变成同一个标准）。</p>
+  <p>注意这五个位置不是同一把尺子上的刻度：提示词、harness 代码、模型权重说的是<b>由什么来实现</b>；开放标准、厂商 API 说的是<b>按谁的约定交付</b>。一个方案常同时占几格，比如一个 Skill 的格式由开放标准规定，内容是提示文本和脚本，由 harness 负责加载。地图和名词卡上的“方案在”只标它最有区分度的那一格，把它当作观察角度，而不是分类答案。</p>
+  <p>很多“新东西”是老方案换了位置。ReAct 的“想、做、看”被训练进了推理模型，提示词模板不再是必需；压缩从 harness 代码搬进了厂商 API；各家的规则文件统一成了 AGENTS.md；各家的“技能目录”统一成了 Skills 规范。常见的方向有两种：<b>交出去</b>（交给厂商或模型来做）和<b>统一</b>（各家的私有做法变成同一个标准）。</p>
 
   <h3><span class="step">4</span>什么会被练进模型</h3>
-  <p>模型怎么学会新本事，<a href="part1.html#c2">第 2 章</a>会细讲。结论是一条可以拿来预测的规律：</p>
-  <div class="callout"><b class="h">一条可以预测的规律</b>一个行为如果能写成示范让模型照着学（SFT），或者能用程序判对错让模型反复试（强化学习），它迟早会被训练进模型。需要真的去碰外部世界、保存状态、承担责任的部分，留在模型外面。</div>
+  <p>模型怎么学会新本事，<a href="part1.html#c2">第 2 章</a>会细讲。这里先给一条经验规律，用来判断方向，不能当定律用：</p>
+  <div class="callout"><b class="h">一条经验规律</b>一个行为如果能写成示范让模型照着学（SFT），或者能用程序判对错让模型反复试（强化学习），它就<b>更有机会</b>通过训练得到改善。但“有机会”不等于“一定会”，更不等于“足以替代外部机制”：能判对错不代表容易试出正确答案，学会示范不代表能可靠泛化，数据、探索成本、奖励漏洞和训练的经济性都会影响结果。某段脚手架能不能删，要在你的模型和任务上评测（第 15 章）。需要真的去碰外部世界、保存状态、承担责任的部分，留在模型外面。</div>
   <div class="tbl"><table>
-    <thead><tr><th>迟早练进模型</th><th>留在模型外</th></tr></thead>
+    <thead><tr><th>更可能练进模型</th><th>留在模型外</th></tr></thead>
     <tbody>
       <tr><td style="white-space:normal;font-weight:400">输出格式：工具调用、编辑格式</td><td>执行：沙箱、进程、文件读写</td></tr>
       <tr><td style="white-space:normal;font-weight:400">推理和工具调用交织、何时停</td><td>状态：会话日志、检查点、git</td></tr>
       <tr><td style="white-space:normal;font-weight:400">规划、自我检查的习惯</td><td>权限、审计、合规</td></tr>
-      <tr><td style="white-space:normal;font-weight:400">协调子 agent（已经开始）</td><td>成本和配额</td></tr>
+      <tr><td style="white-space:normal;font-weight:400">协调子 agent（已有厂商在尝试）</td><td>成本和配额</td></tr>
       <tr><td style="white-space:normal;font-weight:400">为弱模型写的提醒和模板</td><td>验证环境本身：测试、浏览器。它们是奖励的来源，不会被练进模型</td></tr>
     </tbody>
   </table></div>
-  <p>所以看到一个新技巧，先问一句：它是在替模型想，还是在替模型做事？前者的寿命取决于下一代模型，后者长期有效。这就是<a href="part1.html#c1">第 1 章</a>“harness 会变薄吗”的答案的来源。</p>
+  <p>所以看到一个新技巧，先问一句：它是在替模型想，还是在替模型做事？前者的寿命往往取决于下一代模型（删不删由评测决定），后者长期有效。这就是<a href="part1.html#c1">第 1 章</a>“harness 会变薄吗”的答案的来源。</p>
 
   <h3><span class="step">5</span>新词三问</h3>
   <ol class="three-q">
     <li>它回答七个问题里的哪一个？</li>
-    <li>它把方案放在哪一层？上一代方案在哪一层？</li>
+    <li>它把方案放在哪里？上一代方案在哪里？</li>
     <li>和同一行里最像它的那个词相比，它换了哪个维度？</li>
   </ol>
   <div class="java"><span class="tag">示范 · Skills</span>
@@ -120,7 +126,7 @@
 <section class="home-sec" id="map">
   <div class="eyebrow">导读</div>
   <h2>本质地图</h2>
-  <p class="lead">每个词按它回答的问题归到一行，后面一句话说它的本质。切到“按年份”可以看原来的造词年表。点章节号跳到讲它的地方。</p>
+  <p class="lead">每个词按它主要回答的问题归到一行（跨几个问题的词只放在最主要的一行），后面一句话说它的本质。切到“按年份”可以看原来的造词年表。点章节号跳到讲它的地方。</p>
   <div class="emap-bar">
     <div class="row" id="emapView" role="group" aria-label="视图"></div>
     <div class="row" id="emapSt" role="group" aria-label="按状态筛选"></div>
@@ -129,7 +135,7 @@
 </section>
 
 <nav class="pager" id="pager"></nav>
-<footer>本手册以开源项目 <a href="https://github.com/earendil-works/pi" target="_blank" rel="noopener">pi</a> 为例讲解 agent 的原理和工程做法。文中的 pi 源码以 2026 年 10 月的版本为准，之后的版本可能有出入；行业动态和趋势判断同样截至 2026 年 10 月。标注“示意”的代码只用来说明概念。如有错漏，欢迎指正。</footer>
+<footer>本手册以开源项目 <a href="https://github.com/earendil-works/pi" target="_blank" rel="noopener">pi</a> 为例讲解 agent 的原理和工程做法。文中的 pi 源码以 commit <a href="https://github.com/earendil-works/pi/tree/cdaf6c227d4718a72b59ccd02152c9614df44cfc" target="_blank" rel="noopener">cdaf6c2</a>（2026-10-11）为准，之后的版本可能有出入；行业动态和趋势判断同样截至 2026 年 10 月。标注“示意”的代码只用来说明概念。如有错漏，欢迎指正。</footer>
 </main>
 </div>
 <script src="assets/book.js"></script>

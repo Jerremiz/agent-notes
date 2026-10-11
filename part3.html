@@ -57,7 +57,7 @@
     <li>提交任务 → 任务服务写会话、入队。</li>
     <li>Runtime worker 领取任务（带租约），从预热池拿沙箱，拉代码。</li>
     <li>循环：经 LLM 网关请求模型 → 工具调用发到沙箱执行 → 每步追加事件日志并发布到事件总线 → 推送服务转给前端。</li>
-    <li>敏感操作触发审批：任务持久化后挂起，释放 worker。</li>
+    <li>敏感操作触发审批：任务持久化后挂起，释放 worker；沙箱按等待时长决定保留还是先快照再释放（见下表）。</li>
     <li>完成后在沙箱跑测试，通过则提交 MR，释放沙箱。</li>
   </ol>
   </div>
@@ -66,7 +66,7 @@
     <thead><tr><th>问题</th><th>思路</th><th>相关章节</th></tr></thead>
     <tbody>
       <tr><td>worker 挂了</td><td>租约过期由其他 worker 接手，重放事件日志；悬空调用按幂等规则处理</td><td>10</td></tr>
-      <tr><td>等审批占资源吗</td><td>不占：持久化后释放 worker，审批结果作为事件重新入队</td><td>10、13</td></tr>
+      <tr><td>等审批占资源吗</td><td>不必占 worker：持久化后释放，审批结果作为事件重新入队。但沙箱、磁盘、进程、租约仍要管：短等待保留沙箱（设租约和过期时间）；长等待先把工作区快照（未提交的修改打成 patch 或推到内部 WIP 分支，记下镜像和依赖版本），再释放沙箱，恢复时新建沙箱并应用快照；后台进程（如启动的测试服务）不能跨快照保留，恢复后要重新拉起。审批超时自动拒绝并通知</td><td>10、13</td></tr>
       <tr><td>沙箱冷启动慢</td><td>预热池；按语言 / 仓库准备基础镜像；依赖缓存</td><td>—</td></tr>
       <tr><td>代码和凭据安全</td><td>沙箱默认断网只放行制品库；凭据不进沙箱，由执行层代理；全量审计</td><td>13</td></tr>
       <tr><td>成本</td><td>按用户 / 团队预算；前缀缓存 + 粘性路由；小模型做摘要；缓存预热按期望收益决策</td><td>6</td></tr>
@@ -82,10 +82,10 @@
   </table></div>
   <div class="callout"><b class="h">换个场景</b>客服 agent、数据分析 agent、运维排障 agent 都能套用这套架构。变的主要是工具层（业务 API、SQL、监控查询）和安全策略（客服防越权查询他人数据，运维防误操作生产），循环、会话、事件、评测的设计基本不变。</div>
   <div class="ahead"><b class="h">前瞻 · 本章</b><ul>
-    <li><span class="cf sure">确定</span>这套“提交任务 → 云端沙箱 → 产出 PR”的形态已是主流产品形态：Codex 云端任务、GitHub Copilot coding agent（均为 2025-05）、Claude Code 网页版（2025-10）都是这样。</li>
-    <li><span class="cf sure">确定</span>平台的瓶颈从“生成”转向“验证和 review”。设计时把自动验证和审查流程当作一等组件。</li>
-    <li><span class="cf likely">大概率</span>工程师的角色转向写需求、设计验证环境、审查结果（OpenAI 的 harness engineering 实验就是这个方向）。平台要支持一个人同时派出、追踪、验收多个 agent。</li>
-    <li><span class="cf likely">大概率</span>这张架构图里，“Agent Runtime”这一格的代码会变少（脚手架变薄），而“工具执行层”“会话存储”“离线评测”这几格会越来越重。</li>
+    <li><span class="cf sure">已有证据</span>这套“提交任务 → 云端沙箱 → 产出 PR”的形态已是主流产品形态：Codex 云端任务、GitHub Copilot coding agent（均为 2025-05）、Claude Code 网页版（2025-10）都是这样。</li>
+    <li><span class="cf likely">作者判断</span>平台的瓶颈从“生成”转向“验证和 review”。设计时把自动验证和审查流程当作一等组件。</li>
+    <li><span class="cf likely">作者判断</span>工程师的角色转向写需求、设计验证环境、审查结果（OpenAI 的 harness engineering 实验就是这个方向）。平台要支持一个人同时派出、追踪、验收多个 agent。</li>
+    <li><span class="cf likely">作者判断</span>这张架构图里，“Agent Runtime”这一格的代码会变少（脚手架变薄），而“工具执行层”“会话存储”“离线评测”这几格会越来越重。</li>
   </ul></div>
   <label class="understood"><input type="checkbox" data-done="c17"> 我能独立讲完这个设计，并把每个深挖点对应到前面的章节</label>
 </section>
@@ -94,14 +94,14 @@
 <section class="ch" id="c18" data-t="动手项目" data-part="综合" data-imp="aux">
   <div class="eyebrow">第 18 章 <span class="imp aux">动手</span></div>
   <h2>动手项目：用 Java 实现一个 mini harness</h2>
-  <div class="prose"><p>每一步都对照 pi 的对应源码。做完之后，你对每个设计点都有亲手处理过的理解。</p></div>
+  <div class="prose"><p>每一步都对照 pi 的对应源码。做完之后，你对每个设计点都有亲手处理过的理解。<b>测试从第 1 天就开始：</b>先写一个脚本化的假模型（第 15 章），之后每加一个功能，就补上对应的单测（截断不执行、异常不中断、恢复后不重复写……）。第 10–11 天只是在此基础上加真实模型的评测集。</p></div>
   <div class="panel">
-    <div class="ex"><div class="lvl">第 1–2 天</div><div><h4>最小 loop</h4><p>HttpClient + Jackson 直接调一家模型 API，实现 read_file、run_command，跑通第 4 章的循环。对照：<code>ai/README.md</code> Quick Start、<code>agent-loop.ts</code>。</p></div></div>
+    <div class="ex"><div class="lvl">第 1–2 天</div><div><h4>最小 loop</h4><p>HttpClient + Jackson 直接调一家模型 API，实现 read_file、run_command，跑通第 4 章的循环；同时写好脚本化假模型和第一个单测，并给每个任务写下成功标准。对照：<code>ai/README.md</code> Quick Start、<code>agent-loop.ts</code>。</p></div></div>
     <div class="ex"><div class="lvl">第 3–4 天</div><div><h4>护栏</h4><p>最大轮数、参数校验、两阶段执行、超时杀进程树、头尾两种截断、危险命令拦截。对照：<code>executeToolCallsParallel</code>、<code>bash.ts</code>、<code>truncate.ts</code>。</p></div></div>
     <div class="ex"><div class="lvl">第 5 天</div><div><h4>edit 工具</h4><p>实现 oldText → newText 替换，含模糊匹配、唯一性检查、多处修改、按文件加锁。对照：<code>edit-diff.ts</code>、<code>file-mutation-queue.ts</code>。</p></div></div>
     <div class="ex"><div class="lvl">第 6–7 天</div><div><h4>会话与压缩</h4><p>PostgreSQL 只追加事件表，支持恢复和分支；token 估算 + 结构化摘要压缩，不在 toolResult 处切。对照：<code>session-manager.ts</code>、<code>compaction.ts</code>。</p></div></div>
     <div class="ex"><div class="lvl">第 8–9 天</div><div><h4>服务化</h4><p>Spring Boot：提交任务、SSE 推送（带序号续传）、中止、steering；OpenTelemetry 埋点；记录缓存命中率。对照：<code>docs/json.md</code>、<code>agent.ts</code>。</p></div></div>
-    <div class="ex"><div class="lvl">第 10–11 天</div><div><h4>测试与评测</h4><p>脚本化假模型做单测（截断、异常、steering 位置）；20 个任务的评测集，每个跑 3 次，算 pass@k 和 pass^k。对照：<code>fauxProvider</code>。</p></div></div>
+    <div class="ex"><div class="lvl">第 10–11 天</div><div><h4>评测</h4><p>补齐边界单测（steering 位置、恢复）；20 个任务的评测集，每个跑 3 次，每次运行前重置仓库和沙箱、固定模型和预算，算 pass@1、pass@3 和 pass^3。这个规模适合练手和发现明显问题，几个点的差异可能只是波动（第 15 章）。对照：<code>fauxProvider</code>。</p></div></div>
     <div class="ex"><div class="lvl">第 12–14 天</div><div><h4>插件与总结</h4><p>用 SPI 实现工具注册和 tool_call 拦截（失败即拦截）；写一篇“我的实现 vs pi”的设计取舍总结。</p></div></div>
     <div class="ex"><div class="lvl">选做</div><div><h4>消融与长任务</h4><p>换两个不同厂商的模型，逐个关掉 system prompt 里的提醒和额外工具跑评测，记录哪些脚手架对哪个模型有用（第 1、15 章）；再给一个需要多次会话的任务加上功能清单 JSON + 进度文件 + git 提交的接力机制（第 9 章）。这两项最能说明你理解“harness 会怎么变”。</p></div></div>
   </div>
@@ -111,11 +111,11 @@
 <span class="k">行动</span>：
   - 循环：两阶段执行（串行校验与审批、并行执行），超时杀进程树，截断响应不执行……
   - edit：精确 + 模糊匹配、唯一性检查、按 realpath 加锁防丢失更新……
-  - 会话：只追加事件表 + 树结构，按 turn 边界恢复，写操作用 toolCallId 幂等……
+  - 会话：只追加事件表 + 树结构，按 turn 边界恢复，悬空写操作用执行端认得的幂等键去重或先查外部状态……
   - 上下文：结构化摘要、不在 toolResult 处切，前缀保持稳定，缓存命中率从 X% 到 Y%……
-<span class="k">结果</span>：20 个任务评测 pass@3 = X%，pass^3 = Y%；改进工具错误信息后提升 Z 个点；平均费用下降 W%。
+<span class="k">结果</span>：20 个任务 × 3 次，pass@1 = X%，pass^3 = Y%；改进工具错误信息后，有 N 个任务从失败变为稳定通过；每个合格任务的平均费用下降 W%。
 <span class="k">反思</span>：正则拦截不是安全边界；重试只应放在理解语义的那一层；……</pre></div>
-  <p class="small">数字一定要真实测出来，别人会顺着每一个数字追问。</p>
+  <p class="small">数字一定要真实测出来，别人会顺着每一个数字追问。样本只有 20 个任务时，用“几个任务从失败变成通过”来描述改进，比报一个百分点的提升更诚实。</p>
   <label class="understood"><input type="checkbox" data-done="c18"> 我完成了项目并写了总结</label>
 </section>
 
@@ -125,11 +125,11 @@
   <h2>速记清单与自测</h2>
   <h3>先记骨架</h3>
   <div class="flash">
-    <div><b>七个问题</b><span>动手、上下文、状态、连接、分工、验证、防护，各来自模型的一条硬约束</span></div>
-    <div><b>方案五层</b><span>提示词 → harness 代码 → 开放标准 → 厂商 API → 模型权重；新词常是老方案换了一层</span></div>
-    <div><b>什么会练进模型</b><span>能示范或能被程序判对错的行为，迟早被训练进模型；执行、状态、权限、审计留在外面</span></div>
-    <div><b>新词三问</b><span>回答哪个问题？方案在哪一层？和最像的老词比换了哪个维度？</span></div>
-    <div><b>约束从哪来</b><span>预训练只学猜下一个 token：无状态、窗口有限、前缀可复用、会自信地错、无法可靠区分指令和数据</span></div>
+    <div><b>七个问题</b><span>动手、上下文、状态、连接、分工、验证、防护，各来自主流模型的一条工程约束；是导航分类，不是严格划分</span></div>
+    <div><b>方案五个位置</b><span>实现载体：提示词、harness 代码、模型权重；规范或交付方式：开放标准、厂商 API。两个维度，一个方案可以同时占几格</span></div>
+    <div><b>什么会练进模型</b><span>能示范或能被程序判对错的行为，更有机会被训练进模型，删不删看评测；执行、状态、权限、审计留在外面</span></div>
+    <div><b>新词三问</b><span>回答哪个问题？方案放在哪里？和最像的老词比换了哪个维度？</span></div>
+    <div><b>约束从哪来</b><span>来源各不相同：推理接口（无状态）、架构与预算（窗口有限、前缀可复用）、训练目标（会自信地错）、输入表示（指令和数据混在一起）</span></div>
     <div><b>SFT vs RL</b><span>照示范学 vs 自己试、按分数学；写得出答案用前者，判得出好坏用后者</span></div>
     <div><b>反馈 × 更新</b><span>RLHF / RLAIF / RLVR 是反馈从哪来，PPO / GRPO 是怎么更新，两个维度</span></div>
     <div><b>harness 即训练环境</b><span>所以编辑格式绑定模型，模型在训练时用惯的 harness 里往往表现更好</span></div>
@@ -140,7 +140,7 @@
   <div class="flash">
     <div><b>Agent</b><span>LLM 在循环中自主选择并调用工具，直到完成目标</span></div>
     <div><b>Workflow vs Agent</b><span>控制流由代码决定 vs 由模型决定；能用 workflow 就别上 agent</span></div>
-    <div><b>Function calling</b><span>模型输出结构化请求，harness 校验、执行、回填</span></div>
+    <div><b>Function calling</b><span>模型输出动作请求（常见是 JSON 参数，也可以是受语法约束的文本），harness 校验、执行、回填</span></div>
     <div><b>stopReason=length</b><span>参数可能截断，整批工具调用不执行</span></div>
     <div><b>错误回填</b><span>参数错、工具失败都作为错误结果交回模型，不中断循环</span></div>
     <div><b>两阶段执行</b><span>串行做校验与审批，再并行执行，按源顺序回填</span></div>
@@ -155,12 +155,13 @@
     <div><b>多 agent 三类失败</b><span>分派含糊、上下文被淹没、各自完成拼不起来；完成要在“合”的那层验证</span></div>
     <div><b>多 agent</b><span>收益是隔离和并行；pi 用子进程实现</span></div>
     <div><b>会话</b><span>只追加树；compaction、context_edit 也是追加</span></div>
-    <div><b>崩溃恢复</b><span>turn 边界持久化；悬空写操作靠幂等或查状态</span></div>
+    <div><b>崩溃恢复</b><span>turn 边界持久化；悬空写操作靠执行端认得的幂等键或查外部状态；toolCallId 本身不保证对方去重</span></div>
     <div><b>插件契约</b><span>钩子失败即拦截；状态放 details 跟随分支</span></div>
+    <div><b>间接注入</b><span>读外部内容的 LLM 应用都会遇到，RAG 问答也不例外；agent 的额外风险是注入变成真实动作</span></div>
     <div><b>致命三要素</b><span>私有数据 + 不可信内容 + 对外通信，至少切一条</span></div>
     <div><b>安全边界</b><span>沙箱和权限才是边界，正则和提示词不是</span></div>
     <div><b>重试分层</b><span>只在理解语义的层重试，避免重试相乘</span></div>
-    <div><b>测试 vs 评测</b><span>假模型测 harness；评测集测效果，pass@k 与 pass^k</span></div>
+    <div><b>测试 vs 评测</b><span>假模型测 harness；评测集测效果，pass@1、pass@k 与 pass^k；重置环境、固定预算、小样本别信几个点</span></div>
     <div><b>三个 engineering</b><span>prompt ⊂ context ⊂ harness，逐层扩大，不是替代</span></div>
     <div><b>harness 变薄？</b><span>替模型思考的变薄，替模型做事、把关的变厚，部分转给模型和 API</span></div>
     <div><b>MCP 现状</b><span>成了基础设施；热点转向 tool search、code mode、skills，它们多在解决怎么用好 MCP</span></div>
@@ -194,7 +195,7 @@
   <div class="eyebrow">附录 <span class="imp aux">参考</span></div>
   <h2>pi 源码地图</h2>
   <div class="prose">
-  <p>pi 的代码在 <a href="https://github.com/earendil-works/pi" target="_blank" rel="noopener">earendil-works/pi</a>（原 badlogic/pi-mono），TypeScript 编写。先建立地图，各章“pi 的做法”里的源码引用才能对上位置。建议现在就 clone 一份：<code>git clone https://github.com/earendil-works/pi</code>。</p>
+  <p>pi 的代码在 <a href="https://github.com/earendil-works/pi" target="_blank" rel="noopener">earendil-works/pi</a>（原 badlogic/pi-mono），TypeScript 编写。先建立地图，各章“pi 的做法”里的源码引用才能对上位置。本手册核对的是 commit <a href="https://github.com/earendil-works/pi/tree/cdaf6c227d4718a72b59ccd02152c9614df44cfc" target="_blank" rel="noopener"><code>cdaf6c2</code></a>（2026-10-11）。文中的路径多是缩写，省略了 <code>packages/</code>、<code>coding-agent/src/</code> 这类前缀，按下面的地图补全即可。建议现在就 clone 一份并切到这个版本：<code>git clone https://github.com/earendil-works/pi &amp;&amp; git -C pi checkout cdaf6c2</code>。之后的版本可能改名或挪位置，对不上时以这个 commit 为准。</p>
   </div>
 
   <h3><span class="lv l1">基础</span>四层结构</h3>
@@ -211,15 +212,15 @@
   <h3><span class="lv l2">进阶</span>一条消息的旅程</h3>
   <div class="prose"><p>你在终端里敲下“修一下这个测试”并回车，代码依次经过这些地方：</p></div>
   <ol class="journey">
-    <li><div><b>coding-agent/src/main.ts → modes/</b><span>解析命令行，选择交互 / print / json / rpc 模式</span></div></li>
-    <li><div><b>core/agent-session.ts · AgentSession.prompt()</b><span>展开 prompt 模板、处理扩展命令、检查是否需要压缩，把用户消息交给 Agent</span></div></li>
-    <li><div><b>core/system-prompt.ts</b><span>按 section 拼出 system prompt：角色、工具清单、规则、AGENTS.md、skill 索引、cwd</span></div></li>
-    <li><div><b>agent/src/agent.ts · Agent</b><span>管理状态和 steering / follow-up 队列，调用 agentLoop</span></div></li>
-    <li><div><b>agent/src/agent-loop.ts · runLoop()</b><span>循环：transformContext → convertToLlm → 流式请求 → 执行工具 → 回填结果</span></div></li>
-    <li><div><b>ai/ · models.stream()</b><span>把统一格式转换成具体厂商的 HTTP 请求，把 SSE 响应转换回统一事件</span></div></li>
-    <li><div><b>coding-agent/src/core/tools/*.ts</b><span>read / bash / edit / write 的实际实现</span></div></li>
-    <li><div><b>core/session-manager.ts</b><span>每条消息追加写入 JSONL 会话文件</span></div></li>
-    <li><div><b>core/extensions/</b><span>沿途在各个事件点调用扩展的处理器（可以拦截工具、改写上下文）</span></div></li>
+    <li><div><b><a href="https://github.com/earendil-works/pi/blob/cdaf6c227d4718a72b59ccd02152c9614df44cfc/packages/coding-agent/src/main.ts" target="_blank" rel="noopener">coding-agent/src/main.ts → modes/</a></b><span>解析命令行，选择交互 / print / json / rpc 模式</span></div></li>
+    <li><div><b><a href="https://github.com/earendil-works/pi/blob/cdaf6c227d4718a72b59ccd02152c9614df44cfc/packages/coding-agent/src/core/agent-session.ts" target="_blank" rel="noopener">core/agent-session.ts · AgentSession.prompt()</a></b><span>展开 prompt 模板、处理扩展命令、检查是否需要压缩，把用户消息交给 Agent</span></div></li>
+    <li><div><b><a href="https://github.com/earendil-works/pi/blob/cdaf6c227d4718a72b59ccd02152c9614df44cfc/packages/coding-agent/src/core/system-prompt.ts" target="_blank" rel="noopener">core/system-prompt.ts</a></b><span>按 section 拼出 system prompt：角色、工具清单、规则、AGENTS.md、skill 索引、cwd</span></div></li>
+    <li><div><b><a href="https://github.com/earendil-works/pi/blob/cdaf6c227d4718a72b59ccd02152c9614df44cfc/packages/agent/src/agent.ts" target="_blank" rel="noopener">agent/src/agent.ts · Agent</a></b><span>管理状态和 steering / follow-up 队列，调用 agentLoop</span></div></li>
+    <li><div><b><a href="https://github.com/earendil-works/pi/blob/cdaf6c227d4718a72b59ccd02152c9614df44cfc/packages/agent/src/agent-loop.ts" target="_blank" rel="noopener">agent/src/agent-loop.ts · runLoop()</a></b><span>循环：transformContext → convertToLlm → 流式请求 → 执行工具 → 回填结果</span></div></li>
+    <li><div><b><a href="https://github.com/earendil-works/pi/tree/cdaf6c227d4718a72b59ccd02152c9614df44cfc/packages/ai" target="_blank" rel="noopener">ai/ · models.stream()</a></b><span>把统一格式转换成具体厂商的 HTTP 请求，把 SSE 响应转换回统一事件</span></div></li>
+    <li><div><b><a href="https://github.com/earendil-works/pi/tree/cdaf6c227d4718a72b59ccd02152c9614df44cfc/packages/coding-agent/src/core/tools" target="_blank" rel="noopener">coding-agent/src/core/tools/*.ts</a></b><span>read / bash / edit / write 的实际实现</span></div></li>
+    <li><div><b><a href="https://github.com/earendil-works/pi/blob/cdaf6c227d4718a72b59ccd02152c9614df44cfc/packages/coding-agent/src/core/session-manager.ts" target="_blank" rel="noopener">core/session-manager.ts</a></b><span>每条消息追加写入 JSONL 会话文件</span></div></li>
+    <li><div><b><a href="https://github.com/earendil-works/pi/tree/cdaf6c227d4718a72b59ccd02152c9614df44cfc/packages/coding-agent/src/core/extensions" target="_blank" rel="noopener">core/extensions/</a></b><span>沿途在各个事件点调用扩展的处理器（可以拦截工具、改写上下文）</span></div></li>
   </ol>
 
   <h3><span class="lv l3">深入</span>读源码前的 TypeScript 速查</h3>
@@ -239,7 +240,7 @@
   <label class="understood"><input type="checkbox" data-done="px"> 我 clone 了 pi，知道每个包和关键文件的位置</label>
 </section>
 <nav class="pager" id="pager"></nav>
-  <footer>本手册以开源项目 <a href="https://github.com/earendil-works/pi" target="_blank" rel="noopener">pi</a> 为例讲解 agent 的原理和工程做法。文中的 pi 源码以 2026 年 10 月的版本为准，之后的版本可能有出入；行业动态和趋势判断同样截至 2026 年 10 月。标注“示意”的代码只用来说明概念。如有错漏，欢迎指正。</footer>
+  <footer>本手册以开源项目 <a href="https://github.com/earendil-works/pi" target="_blank" rel="noopener">pi</a> 为例讲解 agent 的原理和工程做法。文中的 pi 源码以 commit <a href="https://github.com/earendil-works/pi/tree/cdaf6c227d4718a72b59ccd02152c9614df44cfc" target="_blank" rel="noopener">cdaf6c2</a>（2026-10-11）为准，之后的版本可能有出入；行业动态和趋势判断同样截至 2026 年 10 月。标注“示意”的代码只用来说明概念。如有错漏，欢迎指正。</footer>
 </main>
 </div>
 <script src="assets/book.js"></script>

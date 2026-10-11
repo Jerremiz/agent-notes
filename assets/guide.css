@@ -387,6 +387,8 @@ footer{margin-top:64px;font-size:.82rem;color:var(--muted)}
 html{background:var(--bg)}
 .rail .brand{display:block;color:var(--ink);text-decoration:none}
 .rail .brand:hover{color:var(--accent);background:none}
+/* 目录头部与条目共用一条左边线（条目文字在 8px 处，悬停底色向外伸出） */
+.rail .sub,.rail .meter{padding-inline:8px}
 
 /* 七个问题的小标签：章首“回答”、名词卡、地图里都用它 */
 .qs{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;text-transform:none;letter-spacing:0}
@@ -409,10 +411,6 @@ details.pi[open] > summary{border-bottom:1px solid var(--pi-line)}
 
 /* 首页：怎么学 */
 .learn{max-width:46em}
-.cons{list-style:none;padding:0;margin:16px 0;display:flex;flex-direction:column;gap:0}
-.cons li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;padding:9px 0;border-bottom:1px solid var(--line);align-items:baseline;margin:0}
-.cons li:last-child{border-bottom:0}
-.cons .to{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 /* 方案所在的五层：一条从“自己写”到“交出去”的轴，节点颜色逐级加深 */
 .layersbar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0 20px;margin:22px 0 10px;position:relative}
 .layersbar::before{content:"";position:absolute;left:6px;right:2px;top:6px;height:2px;border-radius:1px;background:linear-gradient(to right,var(--line),var(--accent))}
@@ -492,8 +490,6 @@ details.pi[open] > summary{border-bottom:1px solid var(--pi-line)}
   .layersbar div::before{left:-28px;top:5px}
   .shelf,.booktoc{grid-template-columns:minmax(0,1fr)}
   .slots{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .cons li{grid-template-columns:minmax(0,1fr)}
-  .cons .to{justify-content:flex-start}
   .rail a.brand{display:block;border:0;padding:0 0 6px;font-size:1.05rem}
   details.pi > summary{grid-template-columns:minmax(0,1fr)}
   details.pi > summary .pf{grid-column:1}

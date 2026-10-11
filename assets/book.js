@@ -1,4 +1,4 @@
-/* 全书的唯一数据源：章节目录、七个不变的问题、方案所在的层、名词。
+/* 全书的唯一数据源：章节目录、七个不变的问题、方案常落的位置、名词。
    各页的目录栏、章首的“本章回答”、名词卡的“本质”一行、首页的本质地图都从这里生成。 */
 window.BOOK = {
   parts: {
@@ -30,7 +30,8 @@ window.BOOK = {
     { id:'px',  t:'pi 源码地图',             part:'附录', imp:'aux',   q:[], n:'附' }
   ],
 
-  /* 七个不变的问题。每个都来自模型的一条硬约束；“看”是区分同一行里那些词只需要看的维度。 */
+  /* 七个不变的问题。每个都来自主流模型及其调用方式的一条工程约束；“看”是区分同一行里那些词主要看的维度。
+     这是导航用的分类，不是严格划分：跨几个问题的词只放在最主要的一行。 */
   problems: [
     { id:'q0', n:'⓪', name:'总称',   ask:'名字在变，指的东西差不多',
       from:'不是新问题，是给整件事起的名字',
@@ -58,7 +59,8 @@ window.BOOK = {
       look:'边界在模型里还是模型外，在哪一层拦截、在哪一层重试' }
   ],
 
-  /* 方案住在哪一层。新词出现，常常只是老方案换了一层。 */
+  /* 方案常落的五个位置。提示词 / harness 代码 / 模型权重是“由什么实现”，开放标准 / 厂商 API 是“按谁的约定交付”，
+     一个方案常同时占几格，这里只标最有区分度的那一格。 */
   layers: {
     prompt:   '提示词',
     harness:  'harness 代码',
@@ -88,13 +90,13 @@ window.BOOK = {
       now:'循环留下来了，主流模型不再需要显式的 Thought/Action 模板',
       ess:'动手问题早期的代表性解法：用文本模板让模型写出 Action，再用正则解析。后来格式被训练进模型（function calling），“想、做、看”也被训练进去（推理模型）。' },
     { id:'fc', y:'2023', name:'Function calling', st:'infra', ch:'c3', q:'q1', layer:'weights',
-      now:'所有工具协议的基础',
-      ess:'把“写出一个动作请求”训练进模型，API 用 JSON Schema 约定格式。MCP、tool search、code mode 最后都落到它上面。' },
+      now:'多数工具协议的底层形态',
+      ess:'把“写出一个动作请求”训练进模型，常见做法是用 JSON Schema 约定参数格式。MCP、tool search 通常都落到它上面；但 JSON 不是唯一表达，也有自由文本加语法约束的工具（如 OpenAI custom tools）。不变的是闭环：模型提出请求，运行时校验、执行、回传结果。' },
     { id:'structured', y:'2024', name:'Structured outputs', st:'infra', ch:'c3', q:'q1', layer:'api',
       now:'约束解码成为各家标配',
       ess:'同一个问题再精确一步：解码时就保证符合 schema，格式错误从“事后让模型改”变成“不会发生”。' },
     { id:'aci', y:'2024', name:'ACI', st:'stable', ch:'c7', q:'q1', layer:'harness',
-      now:'“工具是模型的 API”成为共识',
+      now:'“工具是模型的 API”被广泛接受',
       ess:'把动作接口当成给模型用的 API 来设计。第 7 章的设计原则都从这一句推出。' },
     { id:'reasoning', y:'2024', name:'推理模型', st:'stable', ch:'c2', q:'q1', layer:'weights',
       now:'推理与工具调用交织成为默认形态',
@@ -141,7 +143,7 @@ window.BOOK = {
       ess:'压缩还是那个压缩，只是换了住处：从 harness 代码搬进厂商 API。代价是可审计性和可移植性。' },
 
     { id:'memory', y:'2023', name:'Agent memory', st:'debate', ch:'c8', q:'q3', layer:'harness',
-      now:'从“向量库存对话”演变成“文件 + 模型自己读写”',
+      now:'coding agent 里从“向量库存对话”转向“文件 + 模型自己读写”；聊天产品的记忆多由厂商托管',
       ess:'上下文之外存什么、谁来写、怎么找回。MemGPT、memory tool、MEMORY.md 是同一个想法换了存储。' },
     { id:'assistants', y:'2023', name:'Assistants API', st:'gone', ch:'c3', q:'q3', layer:'api',
       now:'2026-08 停用，被 Responses API 取代',
@@ -158,7 +160,7 @@ window.BOOK = {
       ess:'连接问题的第一版：第三方给模型加工具。这个职责后来交给了 MCP。' },
     { id:'mcp', y:'2024', name:'MCP', st:'infra', ch:'c16', q:'q4', layer:'standard',
       now:'讨论变少，是因为它已经普及',
-      ess:'连接 agent 和工具的那一段，把 M×N 次集成变成 M+N。模型面前仍然是 function calling。' },
+      ess:'连接 agent 和工具的那一段，把 M×N 次集成变成 M+N。模型面前通常仍是 function calling。' },
     { id:'protocols', y:'2025', name:'Agent 协议家族（A2A · ACP · AG-UI）', st:'debate', ch:'c11', q:'q4', layer:'standard',
       now:'各连各的两端；A2A 主要在企业平台里用',
       ess:'都是连接问题。认清一个协议只需要问：它连的是哪两端。' },
@@ -189,7 +191,7 @@ window.BOOK = {
       now:'Verified 已近饱和，Pro 等更难的版本接替',
       ess:'用程序判定结果（隐藏测试）。同一类验证器也被拿去当强化学习的奖励。' },
     { id:'rlvr', y:'2025', name:'RLHF → RLVR', st:'hot', ch:'c2', q:'q6', layer:'weights',
-      now:'可验证奖励成为代码、数学、工具使用后训练的主力',
+      now:'公开报告里，可验证奖励是代码、数学、工具使用后训练的主要信号之一',
       ess:'验证信号用在训练上。反馈从哪来（人、模型、程序）和怎么更新参数（PPO、GRPO）是两个独立的维度。' },
     { id:'metr', y:'2025', name:'时间跨度（METR）', st:'stable', ch:'c15', q:'q6',
       now:'2019–2025 的数据约每 7 个月翻一番，成为衡量 agent 的新尺子',
