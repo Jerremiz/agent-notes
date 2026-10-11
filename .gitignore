@@ -1,1 +1,24 @@
-/nlp
+# Local course materials
+/nlp/
+
+# Credentials and local agent/account configuration
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+credentials.json
+service-account*.json
+/.aws/
+/.ssh/
+/.codex/
+/.agents/
+
+# Local logs and OS metadata
+*.log
+.DS_Store
+Thumbs.db
