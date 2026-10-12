@@ -1,0 +1,854 @@
+/* 由 notes-build 生成，不要手改 */
+window.BOOK = {
+ "site": {
+  "title": "看懂 Agent",
+  "tagline": "词会过时，问题不会",
+  "repo": "https://github.com/Jerremiz/agent-notes",
+  "storageKey": "harness-guide-done"
+ },
+ "home": {
+  "page": "index",
+  "label": "导读",
+  "entries": [
+   {
+    "id": "learn",
+    "t": "怎么学"
+   },
+   {
+    "id": "map",
+    "t": "本质地图"
+   }
+  ]
+ },
+ "importance": {
+  "must": {
+   "label": "核心"
+  },
+  "often": {
+   "label": "重要"
+  },
+  "plus": {
+   "label": "延伸"
+  },
+  "aux": {
+   "label": "练习",
+   "title": "练习 / 参考"
+  }
+ },
+ "pages": [
+  {
+   "file": "index",
+   "title": "首页"
+  },
+  {
+   "file": "part1",
+   "title": "原理"
+  },
+  {
+   "file": "part2",
+   "title": "工程化"
+  },
+  {
+   "file": "part3",
+   "title": "综合"
+  }
+ ],
+ "parts": {
+  "原理": {
+   "label": "第一部分 · 原理",
+   "page": "part1.html"
+  },
+  "工程": {
+   "label": "第二部分 · 工程化",
+   "page": "part2.html"
+  },
+  "综合": {
+   "label": "第三部分 · 综合",
+   "page": "part3.html"
+  },
+  "附录": {
+   "label": "附录",
+   "page": "part3.html"
+  }
+ },
+ "chapters": [
+  {
+   "id": "c1",
+   "t": "Agent 与 Harness",
+   "part": "原理",
+   "imp": "must",
+   "q": [
+    "q0",
+    "q5"
+   ],
+   "n": "1",
+   "page": "part1"
+  },
+  {
+   "id": "c2",
+   "t": "模型从哪来",
+   "part": "原理",
+   "imp": "must",
+   "q": [
+    "q1",
+    "q6"
+   ],
+   "n": "2",
+   "page": "part1"
+  },
+  {
+   "id": "c3",
+   "t": "LLM 调用与工具调用",
+   "part": "原理",
+   "imp": "must",
+   "q": [
+    "q1"
+   ],
+   "n": "3",
+   "page": "part1"
+  },
+  {
+   "id": "c4",
+   "t": "Agent Loop",
+   "part": "原理",
+   "imp": "must",
+   "q": [
+    "q1"
+   ],
+   "n": "4",
+   "page": "part1"
+  },
+  {
+   "id": "c5",
+   "t": "上下文工程",
+   "part": "原理",
+   "imp": "must",
+   "q": [
+    "q2"
+   ],
+   "n": "5",
+   "page": "part1"
+  },
+  {
+   "id": "c6",
+   "t": "Prompt Caching",
+   "part": "原理",
+   "imp": "often",
+   "q": [
+    "q2"
+   ],
+   "n": "6",
+   "page": "part1"
+  },
+  {
+   "id": "c7",
+   "t": "工具设计与实现",
+   "part": "原理",
+   "imp": "often",
+   "q": [
+    "q1"
+   ],
+   "n": "7",
+   "page": "part1"
+  },
+  {
+   "id": "c8",
+   "t": "记忆与检索",
+   "part": "原理",
+   "imp": "often",
+   "q": [
+    "q2",
+    "q3"
+   ],
+   "n": "8",
+   "page": "part1"
+  },
+  {
+   "id": "c9",
+   "t": "规划、多 Agent 与长任务",
+   "part": "原理",
+   "imp": "often",
+   "q": [
+    "q5",
+    "q3",
+    "q6"
+   ],
+   "n": "9",
+   "page": "part1"
+  },
+  {
+   "id": "c10",
+   "t": "状态与持久化",
+   "part": "工程",
+   "imp": "often",
+   "q": [
+    "q3"
+   ],
+   "n": "10",
+   "page": "part2"
+  },
+  {
+   "id": "c11",
+   "t": "事件流与集成",
+   "part": "工程",
+   "imp": "plus",
+   "q": [
+    "q4"
+   ],
+   "n": "11",
+   "page": "part2"
+  },
+  {
+   "id": "c12",
+   "t": "扩展机制与钩子",
+   "part": "工程",
+   "imp": "plus",
+   "q": [
+    "q7",
+    "q4"
+   ],
+   "n": "12",
+   "page": "part2"
+  },
+  {
+   "id": "c13",
+   "t": "安全与权限",
+   "part": "工程",
+   "imp": "often",
+   "q": [
+    "q7"
+   ],
+   "n": "13",
+   "page": "part2"
+  },
+  {
+   "id": "c14",
+   "t": "可靠性",
+   "part": "工程",
+   "imp": "often",
+   "q": [
+    "q7"
+   ],
+   "n": "14",
+   "page": "part2"
+  },
+  {
+   "id": "c15",
+   "t": "测试与评测",
+   "part": "工程",
+   "imp": "often",
+   "q": [
+    "q6"
+   ],
+   "n": "15",
+   "page": "part2"
+  },
+  {
+   "id": "c16",
+   "t": "MCP 与工具生态",
+   "part": "工程",
+   "imp": "plus",
+   "q": [
+    "q4",
+    "q2"
+   ],
+   "n": "16",
+   "page": "part2"
+  },
+  {
+   "id": "c17",
+   "t": "综合设计",
+   "part": "综合",
+   "imp": "must",
+   "q": [],
+   "n": "17",
+   "page": "part3"
+  },
+  {
+   "id": "c18",
+   "t": "动手项目",
+   "part": "综合",
+   "imp": "aux",
+   "q": [],
+   "n": "18",
+   "page": "part3"
+  },
+  {
+   "id": "c19",
+   "t": "速记与自测",
+   "part": "综合",
+   "imp": "aux",
+   "q": [],
+   "n": "19",
+   "page": "part3"
+  },
+  {
+   "id": "px",
+   "t": "pi 源码地图",
+   "part": "附录",
+   "imp": "aux",
+   "q": [],
+   "n": "附",
+   "page": "part3"
+  }
+ ],
+ "terms": [
+  {
+   "id": "prompteng",
+   "y": "2020",
+   "name": "Prompt engineering",
+   "st": "stable",
+   "ch": "c1",
+   "q": "q0",
+   "layer": "prompt",
+   "now": "仍然有用，但只是 context engineering 里很小的一块",
+   "ess": "总称里范围最小的一个：一次调用里怎么措辞。"
+  },
+  {
+   "id": "agent",
+   "y": "2023",
+   "name": "Agent",
+   "st": "stable",
+   "ch": "c1",
+   "q": "q0",
+   "now": "从“全自动 AI 员工”变成了“在循环里调用工具的 LLM”",
+   "ess": "今天的定义只有三样：模型、工具、循环。之后的新词都是在这个形态上加东西，没有替换它。"
+  },
+  {
+   "id": "scaffold",
+   "y": "2024",
+   "name": "Harness / Scaffold",
+   "st": "debate",
+   "ch": "c1",
+   "q": "q0",
+   "layer": "harness",
+   "now": "工程界多叫 harness，研究论文里仍常说 scaffold",
+   "ess": "同一个东西的两个名字：包在模型外面、替它执行、给它把关的那层程序。"
+  },
+  {
+   "id": "harnesseng",
+   "y": "2026",
+   "name": "Harness engineering",
+   "st": "hot",
+   "ch": "c1",
+   "q": "q0",
+   "now": "工程重心转向验证环境和反馈回路",
+   "ess": "总称里范围最大的一个。prompt ⊂ context ⊂ harness engineering，逐层扩大，不是新词替代旧词。"
+  },
+  {
+   "id": "react",
+   "y": "2022",
+   "name": "ReAct",
+   "st": "absorbed",
+   "ch": "c4",
+   "q": "q1",
+   "layer": "weights",
+   "now": "循环留下来了，主流模型不再需要显式的 Thought/Action 模板",
+   "ess": "动手问题早期的代表性解法：用文本模板让模型写出 Action，再用正则解析。后来格式被训练进模型（function calling），“想、做、看”也被训练进去（推理模型）。"
+  },
+  {
+   "id": "fc",
+   "y": "2023",
+   "name": "Function calling",
+   "st": "infra",
+   "ch": "c3",
+   "q": "q1",
+   "layer": "weights",
+   "now": "多数工具协议的底层形态",
+   "ess": "把“写出一个动作请求”训练进模型，常见做法是用 JSON Schema 约定参数格式。MCP、tool search 通常都落到它上面；但 JSON 不是唯一表达，也有自由文本加语法约束的工具（如 OpenAI custom tools）。不变的是闭环：模型提出请求，运行时校验、执行、回传结果。"
+  },
+  {
+   "id": "structured",
+   "y": "2024",
+   "name": "Structured outputs",
+   "st": "infra",
+   "ch": "c3",
+   "q": "q1",
+   "layer": "api",
+   "now": "约束解码成为各家标配",
+   "ess": "同一个问题再精确一步：解码时就保证符合 schema，格式错误从“事后让模型改”变成“不会发生”。"
+  },
+  {
+   "id": "aci",
+   "y": "2024",
+   "name": "ACI",
+   "st": "stable",
+   "ch": "c7",
+   "q": "q1",
+   "layer": "harness",
+   "now": "“工具是模型的 API”被广泛接受",
+   "ess": "把动作接口当成给模型用的 API 来设计。第 7 章的设计原则都从这一句推出。"
+  },
+  {
+   "id": "reasoning",
+   "y": "2024",
+   "name": "推理模型",
+   "st": "stable",
+   "ch": "c2",
+   "q": "q1",
+   "layer": "weights",
+   "now": "推理与工具调用交织成为默认形态",
+   "ess": "CoT 和 ReAct 的思路被训练进权重：主流推理模型能先想、调工具、看结果、再想，显式模板不再是必需。训练方法因模型而异：可验证奖励的强化学习是主力，也会结合监督微调和蒸馏。"
+  },
+  {
+   "id": "computeruse",
+   "y": "2024",
+   "name": "Computer use / GUI agent",
+   "st": "debate",
+   "ch": "c7",
+   "q": "q1",
+   "layer": "weights",
+   "now": "没有接口的软件才用它，有 CLI 或 API 时优先用后者",
+   "ess": "动作接口里最通用、也最不精确的一种：看截图、点坐标。和 CLI、API 是同一个问题的不同精度。"
+  },
+  {
+   "id": "codemode",
+   "y": "2025",
+   "name": "Code mode",
+   "st": "hot",
+   "ch": "c16",
+   "q": "q1",
+   "layer": "harness",
+   "now": "工具变成代码 API，只有结果进上下文",
+   "ess": "动作接口从“一轮列出几个调用、结果都回到模型”变成“一段程序”：调用之间的循环、条件和结果加工由代码完成。收益落在上下文上：中间结果不再经过模型。"
+  },
+  {
+   "id": "rag",
+   "y": "2020",
+   "name": "RAG",
+   "st": "debate",
+   "ch": "c8",
+   "q": "q2",
+   "layer": "harness",
+   "now": "从标准架构降为 agent 可以选择调用的检索工具",
+   "ess": "“按需把知识放进上下文”的一种找法：经典做法是预先建索引，每次请求前固定检索。agentic search 只是把谁来找、什么时候找交给了模型。"
+  },
+  {
+   "id": "cot",
+   "y": "2022",
+   "name": "Chain-of-Thought",
+   "st": "absorbed",
+   "ch": "c2",
+   "q": "q2",
+   "layer": "weights",
+   "now": "“一步步想”变成推理模型的内置能力",
+   "ess": "把中间步骤写进上下文，后面的 token 就能用上它。本质是让模型拿上下文当草稿纸。"
+  },
+  {
+   "id": "cache",
+   "y": "2024",
+   "name": "Prompt caching",
+   "st": "infra",
+   "ch": "c6",
+   "q": "q2",
+   "layer": "api",
+   "now": "计费默认维度，harness 设计的硬约束",
+   "ess": "上下文的成本问题。注意力只看前文，相同前缀的计算可以复用；“只追加、不改前缀”的各种设计都由此而来。"
+  },
+  {
+   "id": "longctx",
+   "y": "2024",
+   "name": "长上下文 / “RAG 已死”",
+   "st": "debate",
+   "ch": "c5",
+   "q": "q2",
+   "layer": "weights",
+   "now": "窗口变大，但上下文管理没有消失",
+   "ess": "“窗口有限”这条约束放宽了，“越长越不准”和“按 token 计费”没变，所以上下文仍然要调度。"
+  },
+  {
+   "id": "graphrag",
+   "y": "2024",
+   "name": "GraphRAG",
+   "st": "debate",
+   "ch": "c8",
+   "q": "q2",
+   "layer": "harness",
+   "now": "适合关系类、全局类问题，代价是建图和维护",
+   "ess": "还是按需放入知识，换的只是索引结构：从文本块变成实体和关系。"
+  },
+  {
+   "id": "ctxeng",
+   "y": "2025",
+   "name": "Context engineering",
+   "st": "stable",
+   "ch": "c5",
+   "q": "q2",
+   "now": "取代 prompt engineering 成为主流说法",
+   "ess": "就是“每一轮放什么进上下文”这个问题本身的名字。"
+  },
+  {
+   "id": "ctxrot",
+   "y": "2025",
+   "name": "Context rot",
+   "st": "stable",
+   "ch": "c5",
+   "q": "q2",
+   "now": "长上下文质量衰减被反复测到",
+   "ess": "“越长越不准”这条约束的实测名字。"
+  },
+  {
+   "id": "agentsmd",
+   "y": "2025",
+   "name": "AGENTS.md",
+   "st": "infra",
+   "ch": "c8",
+   "q": "q2",
+   "layer": "standard",
+   "now": "项目规则文件的开放标准",
+   "ess": "常驻上下文的项目规则。和 skill 只差一点：常驻还是按需。"
+  },
+  {
+   "id": "toolsearch",
+   "y": "2025",
+   "name": "Tool search",
+   "st": "infra",
+   "ch": "c16",
+   "q": "q2",
+   "layer": "api",
+   "now": "工具定义按需加载，成为厂商 API 标准能力",
+   "ess": "按需加载，装的是工具定义。思路和 skill 相同，但常驻的通常只有一个搜索入口（有的实现会列出工具名），模型搜到之后才加载完整定义。"
+  },
+  {
+   "id": "skills",
+   "y": "2025",
+   "name": "Skills",
+   "st": "hot",
+   "ch": "c8",
+   "q": "q2",
+   "layer": "standard",
+   "now": "按需加载的做事方法，与 MCP 互补",
+   "ess": "按需加载，装的是做事方法。和 AGENTS.md 差在常驻还是按需，和 tool search 差在装的是方法还是工具定义，和 RAG 差在谁来找、怎么找。"
+  },
+  {
+   "id": "servercompact",
+   "y": "2026",
+   "name": "服务端压缩",
+   "st": "hot",
+   "ch": "c5",
+   "q": "q2",
+   "layer": "api",
+   "now": "压缩转到厂商 API",
+   "ess": "压缩还是那个压缩，只是换了住处：从 harness 代码搬进厂商 API。代价是可审计性和可移植性。"
+  },
+  {
+   "id": "memory",
+   "y": "2023",
+   "name": "Agent memory",
+   "st": "debate",
+   "ch": "c8",
+   "q": "q3",
+   "layer": "harness",
+   "now": "coding agent 里从“向量库存对话”转向“文件 + 模型自己读写”；聊天产品的记忆多由厂商托管",
+   "ess": "上下文之外存什么、谁来写、怎么找回。MemGPT、memory tool、MEMORY.md 是同一个想法换了存储。"
+  },
+  {
+   "id": "assistants",
+   "y": "2023",
+   "name": "Assistants API",
+   "st": "gone",
+   "ch": "c3",
+   "q": "q3",
+   "layer": "api",
+   "now": "2026-08 停用，被 Responses API 取代",
+   "ess": "把状态和循环一起托管给厂商，thread、run 一层套一层，开发者很难控制每一轮。退场的是这套重抽象；状态托管和服务端工具保留在了 Responses API 里。"
+  },
+  {
+   "id": "responses",
+   "y": "2025",
+   "name": "Responses API",
+   "st": "stable",
+   "ch": "c3",
+   "q": "q3",
+   "layer": "api",
+   "now": "“底层给原语，控制权交还开发者”",
+   "ess": "状态可以托管；内置的服务端工具可以在一次请求里由厂商连续执行，但调用你自己的函数时，循环仍由客户端驱动。和 Assistants API 相比，抽象变薄了：客户端的调用流程由开发者自己组织，服务端工具在一次请求内的连续调用仍由厂商编排。"
+  },
+  {
+   "id": "longrun",
+   "y": "2025",
+   "name": "长时任务 harness",
+   "st": "hot",
+   "ch": "c9",
+   "q": "q3",
+   "layer": "harness",
+   "now": "功能清单 + 进度文件 + git，跨会话接力",
+   "ess": "状态外置到文件和 git，每个会话从磁盘重建现场。和第 10 章的事件日志是同一个思路，只是高了一层。"
+  },
+  {
+   "id": "plugins",
+   "y": "2023",
+   "name": "ChatGPT Plugins",
+   "st": "gone",
+   "ch": "c12",
+   "q": "q4",
+   "layer": "api",
+   "now": "被 GPTs、Apps SDK 接替，最终并入 MCP Apps",
+   "ess": "连接问题的第一版：第三方给模型加工具。这个职责后来交给了 MCP。"
+  },
+  {
+   "id": "mcp",
+   "y": "2024",
+   "name": "MCP",
+   "st": "infra",
+   "ch": "c16",
+   "q": "q4",
+   "layer": "standard",
+   "now": "讨论变少，是因为它已经普及",
+   "ess": "连接 agent 和工具的那一段，把 M×N 次集成变成 M+N。模型面前通常仍是 function calling。"
+  },
+  {
+   "id": "protocols",
+   "y": "2025",
+   "name": "Agent 协议家族（A2A · ACP · AG-UI）",
+   "st": "debate",
+   "ch": "c11",
+   "q": "q4",
+   "layer": "standard",
+   "now": "各连各的两端；A2A 主要在企业平台里用",
+   "ess": "都是连接问题。认清一个协议只需要问：它连的是哪两端。"
+  },
+  {
+   "id": "mcpapps",
+   "y": "2026",
+   "name": "MCP Apps",
+   "st": "hot",
+   "ch": "c16",
+   "q": "q4",
+   "layer": "standard",
+   "now": "server 可以返回交互界面",
+   "ess": "连接的另一端多了“界面”，是 ChatGPT Plugins → Apps SDK 这条线的延续。"
+  },
+  {
+   "id": "cli",
+   "y": "2026",
+   "name": "“MCP 已死，CLI 万岁”",
+   "st": "debate",
+   "ch": "c16",
+   "q": "q4",
+   "layer": "harness",
+   "now": "结论是分场景：有 shell 用 CLI，远程和企业用 MCP",
+   "ess": "连接手段之争。有 shell 时，CLI 就是现成的连接，不需要新协议。"
+  },
+  {
+   "id": "mcpstateless",
+   "y": "2026",
+   "name": "MCP 无状态规范",
+   "st": "infra",
+   "ch": "c16",
+   "q": "q4",
+   "layer": "standard",
+   "now": "2026-07-28 版，面向大规模部署",
+   "ess": "协议也遵守“状态显式化、服务无状态”，和第 10 章是同一个原则。"
+  },
+  {
+   "id": "autogpt",
+   "y": "2023",
+   "name": "AutoGPT / BabyAGI",
+   "st": "gone",
+   "ch": "c1",
+   "q": "q5",
+   "layer": "harness",
+   "now": "一度走红后沉寂：模型能力不够，外层程序弥补不了",
+   "ess": "让模型自己拆目标、自己循环。形态和今天差不多，败在模型能力，说明脚手架补不了模型缺的东西。"
+  },
+  {
+   "id": "multiagent",
+   "y": "2023",
+   "name": "Multi-agent",
+   "st": "debate",
+   "ch": "c9",
+   "q": "q5",
+   "layer": "harness",
+   "now": "从角色扮演演变成“子 agent 做上下文隔离”",
+   "ess": "分工问题。拆分的边界从“岗位”变成了“上下文是否独立”。"
+  },
+  {
+   "id": "workflow",
+   "y": "2024",
+   "name": "Workflow vs Agent",
+   "st": "stable",
+   "ch": "c1",
+   "q": "q5",
+   "layer": "harness",
+   "now": "划分被广泛沿用",
+   "ess": "控制流由谁决定：步骤能预先写死就交给代码，写不死才交给模型。"
+  },
+  {
+   "id": "swarm",
+   "y": "2026",
+   "name": "Agent swarm（训练出来的协调者）",
+   "st": "hot",
+   "ch": "c9",
+   "q": "q5",
+   "layer": "weights",
+   "now": "已有厂商用强化学习只训练协调者，子 agent 不动",
+   "ess": "分工的决策也开始被训练进权重，和 ReAct 被练进模型是同一条路。"
+  },
+  {
+   "id": "swebench",
+   "y": "2023",
+   "name": "SWE-bench 等基准",
+   "st": "debate",
+   "ch": "c15",
+   "q": "q6",
+   "now": "Verified 已近饱和，Pro 等更难的版本接替",
+   "ess": "用程序判定结果（隐藏测试）。同一类验证器也被拿去当强化学习的奖励。"
+  },
+  {
+   "id": "rlvr",
+   "y": "2025",
+   "name": "RLHF → RLVR",
+   "st": "hot",
+   "ch": "c2",
+   "q": "q6",
+   "layer": "weights",
+   "now": "公开报告里，可验证奖励是代码、数学、工具使用后训练的主要信号之一",
+   "ess": "验证信号用在训练上。反馈从哪来（人、模型、程序）和怎么更新参数（PPO、GRPO）是两个独立的维度。"
+  },
+  {
+   "id": "metr",
+   "y": "2025",
+   "name": "时间跨度（METR）",
+   "st": "stable",
+   "ch": "c15",
+   "q": "q6",
+   "now": "2019–2025 的数据约每 7 个月翻一番，成为衡量 agent 的新尺子",
+   "ess": "衡量方式从“做对几道题”变成“能完成多长的任务”。任务长度按人类专家完成所需的时间算，不是 agent 实际运行了多久。"
+  },
+  {
+   "id": "selfevolve",
+   "y": "2026",
+   "name": "Skill 自进化",
+   "st": "hot",
+   "ch": "c9",
+   "q": "q6",
+   "layer": "harness",
+   "now": "把验证过的经验写回 skill 和记忆文件",
+   "ess": "验证信号用来改写文件，而不是改权重。和强化学习是同一个回路，落点不同。"
+  },
+  {
+   "id": "injection",
+   "y": "2022",
+   "name": "Prompt injection",
+   "st": "debate",
+   "ch": "c13",
+   "q": "q7",
+   "now": "仍无模型层面的根治办法，靠架构限制危害",
+   "ess": "“模型无法可靠区分指令和数据”这条约束本身。模型的抗注入训练能降低成功率，但不构成安全边界；真正的边界放在模型外，各种方案的区别在于放在哪一层。"
+  },
+  {
+   "id": "hooks",
+   "y": "2025",
+   "name": "Hooks",
+   "st": "stable",
+   "ch": "c12",
+   "q": "q7",
+   "layer": "harness",
+   "now": "harness 可扩展成为标配",
+   "ess": "在动作执行前后插入检查的位置。安全、审计、定制都挂在这里。"
+  },
+  {
+   "id": "trifecta",
+   "y": "2025",
+   "name": "致命三要素",
+   "st": "stable",
+   "ch": "c13",
+   "q": "q7",
+   "now": "分析注入风险的标准框架",
+   "ess": "判断注入能不能把数据偷走：私有数据、不可信内容、对外通信三者同时存在，就有外泄风险，切断任意一个即可堵住这条路。删文件、改代码这类其他危害不在它的覆盖范围内。"
+  },
+  {
+   "id": "sandbox",
+   "y": "2025",
+   "name": "沙箱默认开启",
+   "st": "infra",
+   "ch": "c13",
+   "q": "q7",
+   "layer": "harness",
+   "now": "从可选变成默认",
+   "ess": "把边界放在操作系统和虚拟化层：模型被说服了也出不去。"
+  }
+ ],
+ "status": {
+  "hot": "正流行",
+  "infra": "已成标配",
+  "absorbed": "已练进模型",
+  "stable": "稳定",
+  "debate": "仍在演变",
+  "gone": "已淘汰"
+ },
+ "problems": [
+  {
+   "id": "q0",
+   "n": "⓪",
+   "name": "总称",
+   "ask": "名字在变，指的东西差不多",
+   "from": "不是新问题，是给整件事起的名字",
+   "look": "范围大小：prompt ⊂ context ⊂ harness engineering"
+  },
+  {
+   "id": "q1",
+   "n": "①",
+   "name": "动手",
+   "ask": "模型的输出怎么变成动作",
+   "from": "模型只产出 token，自己什么也不执行",
+   "look": "动作接口有多精确：文本模板 → JSON 调用 → 约束解码 → 一段代码；GUI 点击 → CLI 参数 → API"
+  },
+  {
+   "id": "q2",
+   "n": "②",
+   "name": "上下文",
+   "ask": "每一轮放什么进上下文",
+   "from": "窗口有限，内容越长用得越差，每个 token 都要付钱",
+   "look": "放的是什么（知识 / 方法 / 工具定义 / 历史）、常驻还是按需、谁来触发、怎么找到"
+  },
+  {
+   "id": "q3",
+   "n": "③",
+   "name": "状态",
+   "ask": "上下文之外存什么，怎么接回来",
+   "from": "模型无状态，每次请求都从零读起",
+   "look": "状态存在哪（上下文 / 本地文件 / git / 厂商服务端），谁来写"
+  },
+  {
+   "id": "q4",
+   "n": "④",
+   "name": "连接",
+   "ask": "外部系统和能力怎么接进来",
+   "from": "模型看不到训练之外的系统和数据",
+   "look": "连的是哪两端"
+  },
+  {
+   "id": "q5",
+   "n": "⑤",
+   "name": "分工",
+   "ask": "工作怎么拆，流程由谁决定",
+   "from": "一个上下文装不下所有东西，一条循环串行又太慢",
+   "look": "按什么边界拆（岗位 → 上下文是否独立），拆法由谁决定（代码 / 模型 / 训练）"
+  },
+  {
+   "id": "q6",
+   "n": "⑥",
+   "name": "验证",
+   "ask": "怎么知道做对了",
+   "from": "输出是概率性的，会自信地出错",
+   "look": "反馈从哪来（程序 / 人 / 模型），用在哪（运行中 / 离线评测 / 改写文件 / 训练权重）"
+  },
+  {
+   "id": "q7",
+   "n": "⑦",
+   "name": "防护",
+   "ask": "出错或被攻击时怎么控制损失",
+   "from": "模型无法可靠区分指令和数据；模型和外部服务都会失败",
+   "look": "边界在模型里还是模型外，在哪一层拦截、在哪一层重试"
+  }
+ ],
+ "layers": {
+  "prompt": "提示词",
+  "harness": "harness 代码",
+  "standard": "开放标准",
+  "api": "厂商 API",
+  "weights": "模型权重"
+ }
+};

@@ -1,0 +1,12 @@
+{
+  "name": "agent-notes",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "notes-build",
+    "dev": "notes-dev"
+  },
+  "devDependencies": {
+    "notes-theme": "file:../notes-theme"
+  }
+}

@@ -1,35 +1,6 @@
-/* 全书的唯一数据源：章节目录、七个不变的问题、方案常落的位置、名词。
-   各页的目录栏、章首的“本章回答”、名词卡的“本质”一行、首页的本质地图都从这里生成。 */
-window.BOOK = {
-  parts: {
-    '原理': { label: '第一部分 · 原理', page: 'part1.html' },
-    '工程': { label: '第二部分 · 工程化', page: 'part2.html' },
-    '综合': { label: '第三部分 · 综合', page: 'part3.html' },
-    '附录': { label: '附录', page: 'part3.html' }
-  },
-  chapters: [
-    { id:'c1',  t:'Agent 与 Harness',        part:'原理', imp:'must',  q:['q0','q5'] },
-    { id:'c2',  t:'模型从哪来',              part:'原理', imp:'must',  q:['q1','q6'] },
-    { id:'c3',  t:'LLM 调用与工具调用',      part:'原理', imp:'must',  q:['q1'] },
-    { id:'c4',  t:'Agent Loop',              part:'原理', imp:'must',  q:['q1'] },
-    { id:'c5',  t:'上下文工程',              part:'原理', imp:'must',  q:['q2'] },
-    { id:'c6',  t:'Prompt Caching',          part:'原理', imp:'often', q:['q2'] },
-    { id:'c7',  t:'工具设计与实现',          part:'原理', imp:'often', q:['q1'] },
-    { id:'c8',  t:'记忆与检索',              part:'原理', imp:'often', q:['q2','q3'] },
-    { id:'c9',  t:'规划、多 Agent 与长任务', part:'原理', imp:'often', q:['q5','q3','q6'] },
-    { id:'c10', t:'状态与持久化',            part:'工程', imp:'often', q:['q3'] },
-    { id:'c11', t:'事件流与集成',            part:'工程', imp:'plus',  q:['q4'] },
-    { id:'c12', t:'扩展机制与钩子',          part:'工程', imp:'plus',  q:['q7','q4'] },
-    { id:'c13', t:'安全与权限',              part:'工程', imp:'often', q:['q7'] },
-    { id:'c14', t:'可靠性',                  part:'工程', imp:'often', q:['q7'] },
-    { id:'c15', t:'测试与评测',              part:'工程', imp:'often', q:['q6'] },
-    { id:'c16', t:'MCP 与工具生态',          part:'工程', imp:'plus',  q:['q4','q2'] },
-    { id:'c17', t:'综合设计',                part:'综合', imp:'must',  q:[] },
-    { id:'c18', t:'动手项目',                part:'综合', imp:'aux',   q:[] },
-    { id:'c19', t:'速记与自测',              part:'综合', imp:'aux',   q:[] },
-    { id:'px',  t:'pi 源码地图',             part:'附录', imp:'aux',   q:[], n:'附' }
-  ],
-
+/* 看懂 Agent 的数据：七个问题、方案所在的五层、名词状态、名词表。
+   名词卡（::: term）、章首的“本章回答”、首页的本质地图都从这里取。 */
+export default {
   /* 七个不变的问题。每个都来自主流模型及其调用方式的一条工程约束；“看”是区分同一行里那些词主要看的维度。
      这是导航用的分类，不是严格划分：跨几个问题的词只放在最主要的一行。 */
   problems: [
