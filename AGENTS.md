@@ -4,7 +4,7 @@
 
 - 正文在 `content/<页面>/`，一章一个 Markdown 文件。组件写法见 notes-theme 的 README 和 styleguide。
 - `docs/` 是生成结果，**不要手改**；改完内容运行 `npm run build`，连同 `docs/` 一起提交。
-- 本地预览：`npm run dev`，打开 http://localhost:4000。
+- 本地预览：`npm run dev`，打开 http://127.0.0.1:4000（只监听本机）。
 - 名词、七个问题、五层在 `data/agent.mjs`；书的配置在 `notes.config.mjs`。
 - 本书专用的样式和交互在 `assets/agent.css`、`assets/agent.js`；通用的东西改 notes-theme，不在这里覆盖主题样式。
 
@@ -13,7 +13,7 @@
 `legacy/` 里是还没转成 Markdown 的页面（只剩首页），构建时原样复制。迁移一页时：
 
 1. 把它的章节拆成 `content/<页面>/NN-xxx.md`，章节信息写进各文件开头，并从 `notes.config.mjs` 的 `legacyChapters` 删掉这些章。
-2. 页面里的交互演示和本书专用脚本从 `legacy/assets/guide.js` 搬到 `assets/agent.js` 或 `widgets/`。
+2. 页面里的交互演示拆成 `widgets/名字.html`（`::: widget 名字`）和 `assets/demos/名字.js`（一个演示一个文件，加进 `notes.config.mjs` 的 `scripts`），全书公共逻辑放 `assets/agent.js`；从 `legacy/assets/guide.js` 删掉搬走的代码和自测题。
 3. 去掉 `pages` 里这一页的 `legacy: true`，删掉 `legacy/` 里的旧文件。
 4. 对比迁移前后的截图（浅色、深色、手机宽度）：`npm run build` 后 `npm run shots -- shoot <名字>`，再 `npm run shots -- compare baseline <名字>`，打开 `shots/compare-baseline-<名字>/index.html` 逐张看。“新出现的问题”必须为空；“缺少的截图”说明章节 id 或演示的元素 id 变了。
 
