@@ -15,7 +15,14 @@
 1. 把它的章节拆成 `content/<页面>/NN-xxx.md`，章节信息写进各文件开头，并从 `notes.config.mjs` 的 `legacyChapters` 删掉这些章。
 2. 页面里的交互演示和本书专用脚本从 `legacy/assets/guide.js` 搬到 `assets/agent.js` 或 `widgets/`。
 3. 去掉 `pages` 里这一页的 `legacy: true`，删掉 `legacy/` 里的旧文件。
-4. 对比迁移前后的截图（浅色、深色、手机宽度）。
+4. 对比迁移前后的截图（浅色、深色、手机宽度）：`npm run build` 后 `npm run shots -- shoot <名字>`，再 `npm run shots -- compare baseline <名字>`，打开 `shots/compare-baseline-<名字>/index.html` 逐张看。“新出现的问题”必须为空；“缺少的截图”说明章节 id 或演示的元素 id 变了。
+
+## 截图脚本
+
+- `scripts/shots.mjs` 截图并检查（控制台报错、404、外部请求、重复 id、站内链接和锚点），`scripts/shots.config.mjs` 是交互演示的操作清单。用法写在脚本开头。
+- 第一次用先装浏览器：`npx playwright install chromium`（版本跟着 `package.json` 里锁定的 playwright）。
+- 截图存在 `shots/`，不提交。基线只能和同一平台、同一浏览器版本拍的截图比；换了机器或升级了 playwright，先用迁移前的提交重拍基线。
+- 同一份产物重拍应当零差异。“细微差异”是 1–3 像素宽的线，多半是渲染抖动，但也要看一眼。
 
 ## 写作口径
 
