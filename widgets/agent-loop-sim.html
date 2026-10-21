@@ -1,0 +1,21 @@
+<div class="panel" id="sim">
+  <div class="panel-title"><span>Agent Loop 模拟器</span><small id="simStep">第 0 / 0 步</small></div>
+  <div class="sim">
+    <div style="min-width:0">
+      <div class="code"><div class="hd"><span>AgentLoop.java</span><span>伪代码</span></div><pre id="simCode"></pre></div>
+      <div class="note" id="simNote"></div>
+      <div class="events" id="simEvents" aria-label="本步发出的事件"></div>
+    </div>
+    <div class="ctx">
+      <div class="hd"><span>messages（发给模型的上下文）</span><span id="simCount">0 条</span></div>
+      <div class="list" id="simList"></div>
+    </div>
+  </div>
+  <div class="stats"><span>turn <b id="stTurn">0</b></span><span>模型调用 <b id="stCalls">0</b> 次</span><span>工具执行 <b id="stTools">0</b> 次</span><span>本次请求约 <b id="stTok">0</b> token</span></div>
+  <div class="row" style="margin-top:14px">
+    <button class="btn" id="simPrev">上一步</button>
+    <button class="btn pri" id="simNext">下一步</button>
+    <button class="btn" id="simPlay">自动播放</button>
+    <button class="btn" id="simReset">重置</button>
+  </div>
+</div>

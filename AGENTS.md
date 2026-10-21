@@ -10,7 +10,7 @@
 
 ## 迁移期间
 
-`legacy/` 里是还没转成 Markdown 的页面（首页、第一部分、第二部分），构建时原样复制。迁移一页时：
+`legacy/` 里是还没转成 Markdown 的页面（只剩首页），构建时原样复制。迁移一页时：
 
 1. 把它的章节拆成 `content/<页面>/NN-xxx.md`，章节信息写进各文件开头，并从 `notes.config.mjs` 的 `legacyChapters` 删掉这些章。
 2. 页面里的交互演示和本书专用脚本从 `legacy/assets/guide.js` 搬到 `assets/agent.js` 或 `widgets/`。

@@ -1,0 +1,16 @@
+<div class="panel" id="budget">
+  <div class="panel-title"><span>上下文预算模拟</span><small>窗口 200k · 压缩参数取 pi 默认值</small></div>
+  <div class="bar" id="bBar" role="img" aria-label="上下文占用"></div>
+  <div class="legend" id="bLegend"></div>
+  <div class="ctrl">
+    <label for="bTurns">对话已进行</label>
+    <input type="range" id="bTurns" min="0" max="45" value="8">
+    <span><b id="bTurnsV">8</b> 个 turn</span>
+  </div>
+  <div class="checks">
+    <label><input type="checkbox" id="bSkills"> 把 12 个 skill 的全文都塞进 system prompt</label>
+    <label><input type="checkbox" id="bCompact" checked> 开启自动压缩</label>
+  </div>
+  <div class="status" id="bStatus"></div>
+  <p class="small" style="margin-bottom:0">红线 = 窗口 − <code>reserveTokens</code>（16384，给回复预留），超过就压缩；压缩后保留最近约 <code>keepRecentTokens</code>（20000）。每个 turn 按增加 7k token 估算。</p>
+</div>

@@ -25,7 +25,8 @@
 - [ ] edit 匹配演示改成静态表格？会话树改成静态图？（等价迁移之后再定）
 - [x] `::: analogy` 去留（书里没用，styleguide 有示例）
   - 结论：保留。旧页面的“Java 类比”框（`div.java`）就是它，第二部分已经在用。
-- [ ] 名词卡的名称、状态以哪边为准？迁移后跟随 `data/agent.mjs`（和首页本质地图一致），和旧卡片有 5 处不同：hooks“Hooks / Plugins”→“Hooks”、protocols“Agent 协议家族”→“Agent 协议家族（A2A · ACP · AG-UI）”、swebench“SWE-bench、Terminal-Bench 与时间跨度”→“SWE-bench 等基准”；状态 injection“未解决”→“仍在演变”、swebench“更新很快”→“仍在演变”。要保留旧写法，就改 `data/agent.mjs`（首页地图跟着变），或给名词卡加覆盖写法。第一部分迁移时可能还有更多。
+- [x] 名词卡的名称、状态以哪边为准？迁移后跟随 `data/agent.mjs`（和首页本质地图一致），和旧卡片有 5 处不同：hooks“Hooks / Plugins”→“Hooks”、protocols“Agent 协议家族”→“Agent 协议家族（A2A · ACP · AG-UI）”、swebench“SWE-bench、Terminal-Bench 与时间跨度”→“SWE-bench 等基准”；状态 injection“未解决”→“仍在演变”、swebench“更新很快”→“仍在演变”。要保留旧写法，就改 `data/agent.mjs`（首页地图跟着变），或给名词卡加覆盖写法。第一部分迁移时可能还有更多。
+  - 结论（2026-10-22）：**维持现状，以 `data/agent.mjs` 为准**（和首页本质地图一致）。旧卡片上的写法不保留；第一部分照此处理。
 
 ## 步骤
 
@@ -74,8 +75,12 @@
   - 用一次性脚本在关掉 JS 的 Chromium 里解析 `legacy/part2.html` 生成 Markdown，再人工审。演示：`widgets/session-tree.html`、`widgets/hook-sim.html`，脚本 `assets/demos/session-tree.js`、`hook-sim.js`（从 guide.js 原样搬来）。guide.js 里这两段和第二部分的 9 道自测题已删。
   - 主题为此新增：`sql` 高亮；组件参数末尾 `{open}`（`term`、`ref`、`q` 默认展开，旧页面里 MCP 名词卡是默认展开的）。
   - 验收（`compare baseline part2-b`）：`book.js` 一字未改（章号、目录、所属问题）；正文逐字一致；目录栏、首页、第一和第三部分截图不变；链接、锚点、重复 id、控制台检查零问题；两个演示都能操作，会话树截图逐像素一致。
-  - 有意保留的差异：① 3 个名词卡的名称和 2 个状态标签改为跟随 `data/agent.mjs`（hooks、protocols、swebench 的名称；injection、swebench 的状态），因为主题的名词卡只从名词表取这些信息——**待用户确认**，见“待决定”；② 两个 `text` 代码块（事件序列、恢复顺序）里 `← …` 注释不再是灰色；③ 代码高亮改由主题生成，`undefined`、对象键 `type:` 等也会上色；④ 新增页脚（旧页面没有）；⑤ 文字抗锯齿和亚像素偏移。
-- [ ] 第一部分
+  - 有意保留的差异：① 3 个名词卡的名称和 2 个状态标签改为跟随 `data/agent.mjs`（hooks、protocols、swebench 的名称；injection、swebench 的状态），因为主题的名词卡只从名词表取这些信息——用户已确认以名词表为准；② 两个 `text` 代码块（事件序列、恢复顺序）里 `← …` 注释不再是灰色；③ 代码高亮改由主题生成，`undefined`、对象键 `type:` 等也会上色；④ 新增页脚（旧页面没有）；⑤ 文字抗锯齿和亚像素偏移。
+- [x] 第一部分（2026-10-22，等价迁移）
+  - 9 章；4 个演示：`agent-loop-sim`、`context-budget`、`prompt-builder`、`edit-match`（HTML 在 `widgets/`，脚本在 `assets/demos/`，从 guide.js 原样搬来）。guide.js 里这 4 段和 20 道自测题已删，顺带删了迁第三部分时漏删的第 17 章那道题。`legacyChapters` 已清空。
+  - 原样 HTML（主题没有对应组件，内容调整阶段再看）：第 1 章“变薄 / 移交 / 变厚”三栏图、第 5 章五个槽位图、第 2、8、9 章的章首导语 `p.lead`、第 8 章两个单元小标题。
+  - 验收（`compare baseline part1-a`）：`book.js` 一字未改；正文逐字一致；目录栏、首页截图不变；检查零问题；**桌面端 4 个演示操作后逐像素一致**。
+  - 差异都属于第二部分已列的几类：名词卡跟随名词表（scaffold 状态；fc、longctx、skills 名称）、`text` 代码块注释不再是灰色（第 2 章“只看答案的奖励”）、新增页脚、亚像素偏移（手机端演示和第 4、6、7 章高度差 1 个 CSS 像素，图上一致）。
 
 ### 4. 首页接入统一模板，删掉旧机制
 

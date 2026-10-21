@@ -1,6 +1,6 @@
 /* 看懂 Agent · 本书专用脚本（在 notes-theme 的 shell.js 之前加载）
    通用的目录、进度、翻页、问答、自测都在 shell.js；这里只做和“七个问题”有关的事。
-   迁移期间：模拟器、本质地图等还在 legacy/assets/guide.js 里，迁移对应页面时搬过来。 */
+   交互演示一个一个文件，在 assets/demos/；首页的本质地图还在 legacy/assets/guide.js 里（迁移首页时搬过来）。 */
 (function(){
   const B = window.BOOK;
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };

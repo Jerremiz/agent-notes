@@ -1,0 +1,12 @@
+<div class="panel">
+  <div class="panel-title"><span>system prompt 拼装器</span><small>依据 system-prompt.ts 与 tools/*.ts</small></div>
+  <div class="checks">
+    <label><input type="checkbox" id="pbAgents" checked> 项目有 AGENTS.md</label>
+    <label><input type="checkbox" id="pbAppend"> 有 APPEND_SYSTEM.md</label>
+    <label><input type="checkbox" id="pbSkills" checked> 装了 2 个 skill</label>
+    <label><input type="checkbox" id="pbSearch"> 启用 grep / find / ls</label>
+    <label><input type="checkbox" id="pbSystem"> 用 SYSTEM.md 整体替换</label>
+  </div>
+  <div class="pb-out" id="pbOut" aria-live="polite"></div>
+  <div class="pb-meta"><span>约 <b id="pbTok">0</b> token</span><span id="pbSections"></span></div>
+</div>

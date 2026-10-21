@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>原理 · 看懂 Agent</title>
-<link rel="stylesheet" href="assets/guide.css">
+<link rel="stylesheet" href="assets/theme.css">
+<link rel="stylesheet" href="assets/agent.css">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 </head>
 <body>
@@ -22,314 +23,424 @@
 <main>
 <div class="part-head" id="a0"><div class="eyebrow">第一部分</div><h2>原理</h2><p class="lead">理解任何 agent 的地基。第 1–5 章是核心，至少要能不看资料讲清楚；第 6–9 章各回答一个更具体的问题。</p></div>
 
-<!-- 1 -->
 <section class="ch" id="c1" data-t="Agent 与 Harness" data-part="原理" data-imp="must">
-  <div class="eyebrow">第 1 章 <span class="imp must">核心</span></div>
-  <h2>Agent、Workflow 与 Harness</h2>
-
-  <h3><span class="lv l1">基础</span>LLM 只是一个无状态函数</h3>
-  <div class="prose">
-  <p>LLM 输入一串消息，输出下一条消息。它不能读文件，不能调接口，也记不住上一次请求。所有“能力”都来自包在它外面的程序。</p>
-  <p><b>Harness</b> 就是这层程序：维护对话历史、提供并执行工具、拼装上下文、保存会话、处理权限、发出事件。Claude Code、Codex CLI、pi 都是 harness。</p>
-  </div>
-  <div class="java">
-    <div class="tag">Java 类比</div>
-    <p>模型像一个无状态的远程服务（同样的输入也可能得到不同的输出） <code>Message complete(List&lt;Message&gt; history)</code>；harness 像 Spring + Tomcat，负责生命周期、路由、状态、拦截器和持久化。</p>
-  </div>
-  <details class="term" data-term="agent"><summary><b>Agent</b><span class="st stable">稳定</span><span class="one">含义从“全自动 AI 员工”变成了“在循环里调用工具的 LLM”</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2023-03</time><span>AutoGPT、BabyAGI 一度走红：让 GPT-4 自己拆目标、自己循环。演示惊艳，实际任务几乎跑不通，热度几个月就退了。</span></li>
-      <li><time>2023–24</time><span>LangChain agents、AutoGen、CrewAI 等框架把“agent”做成了一套抽象，概念多、可控性差。</span></li>
-      <li><time>2024-12</time><span>Anthropic《Building Effective Agents》给出今天通用的定义，并和 workflow 划清界限。</span></li>
-      <li><time>2025</time><span>Claude Code、Codex CLI、Cursor agent 等 coding agent 正式投入使用，“agent”第一次大规模可用。</span></li>
-    </ul>
-    <p class="rel"><b>为什么 2023 年那批失败了：</b>当时模型的工具调用、长程规划和自我纠错都不够，harness 再花哨也补不上。<b>这和第 1 章结尾的“变薄”是同一个规律</b>：模型能力不到位时，外层程序弥补不了；模型到位后，脚手架反而要拆。</p>
-  </div></details>
-  <details class="term" data-term="scaffold"><summary><b>Harness / Scaffold</b><span class="st hot">正流行</span><span class="one">2024 年多叫 scaffold，2025 年起叫 harness，2026 年出现了 harness engineering</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2024</time><span>SWE-agent 等研究工作把模型外面的程序叫 scaffold（脚手架），强调它是临时的辅助结构。</span></li>
-      <li><time>2025</time><span>Claude Agent SDK、Codex 等开始把这层叫 harness（挽具），强调它“驾驭”模型、长期存在。</span></li>
-      <li><time>2026-02</time><span>OpenAI 发表《Harness engineering》：一个团队五个月不手写代码，全部由 Codex 生成；工程师的工作变成设计环境、约束和反馈回路。</span></li>
-    </ul>
-    <p class="rel"><b>和相邻的词：</b>prompt engineering（写好一段提示）⊂ context engineering（每一轮放什么进上下文，第 5 章）⊂ harness engineering（上下文之外，再加工具、沙箱、验证、反馈回路的整套环境）。三个词是<b>逐层扩大的关系，不是新词替代旧词</b>。</p>
-  </div></details>
-
-  <h3><span class="lv l1">基础</span>Agent = 模型 + Harness</h3>
-  <div class="prose">
-  <p>agent 和 harness 不是两个并列的零件。<b>harness 是包在模型外面、负责运行和控制的那层程序；agent 是把模型放进 harness、跑起来之后的整个系统。</b>这层程序可以自己写，可以用 SDK，也可以交给厂商托管（第 3 章）。“Agent = 模型 + Harness”是工程上的简化说法：给模型套一层程序不一定就是 agent，还要看下一步由谁决定（下一节）。</p>
-  <p>沿用上面的 Spring + Tomcat 类比：harness 像 Tomcat 这样的容器，它不是被动的盒子，而是要管生命周期、拦截和状态；agent 像部署进去、正在运行的应用。不同的是，这个应用的规矩可以事先定好（业务规则、权限、怎样才算验收通过），但具体一步步怎么走没有写死，由模型每一轮当场决定。</p>
-  <p>两边各管一半：</p>
-  </div>
-  <div class="tbl"><table>
-    <thead><tr><th></th><th>模型</th><th>Harness</th></tr></thead>
-    <tbody>
-      <tr><td>负责</td><td><b>决定做什么</b>：理解目标，选下一步调哪个工具、填什么参数，判断什么时候该收尾、什么时候该问人</td><td><b>负责做到、负责把关</b>：执行工具，把结果送回去，维护历史，拼装上下文，拦截危险操作，执行审批和预算上限，保存会话</td></tr>
-      <tr><td>做不到</td><td>直接碰外部世界；记住上一次请求（历史要由外面保存，再送回给它）</td><td>替模型选任务路径。它可以定规矩：改完必须跑测试、失败重试几次、哪些操作要审批、预算用完就停；但如果连每一步怎么走都由代码写死，就成了 workflow（下一节）。workflow 不比 agent 低级，只是适合的任务不同</td></tr>
-      <tr><td>只换这一边</td><td>同一个 harness 换上更强的模型，规划、纠错、何时停下通常会变好，但不保证每一项都变好，要在自己的任务上评测（第 15 章）</td><td>同一个模型换个 harness，能用的工具、能看到的上下文都变了，成绩可能差一大截</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose">
-  <p>两边靠一个循环接起来（第 4 章展开）：harness 把历史和工具清单发给模型 → 模型回一条消息，可能带着工具调用 → harness 执行工具，把结果追加到历史里 → 再发给模型，直到模型不再调用工具。<b>循环是 harness 写的，每一圈往哪走由模型决定。</b></p>
-  <p>注意，“模型不再调用工具”只说明这一段跑完了，不等于任务做成了：模型可能是做完了，也可能是要问用户，或者已经走不下去了，做没做成要另外验证。harness 也可以中途让循环暂停（等人审批），或者因为轮数、预算、超时、用户取消把它终止（第 4 章）。</p>
-  <p>日常说法里这两个词常被混用。“Claude Code 是一个 agent”说的是它带着模型运行时的样子；“Claude Code 是一个 harness”说的是去掉模型后剩下的那份程序。讨论设计时最好分开问：失败是因为模型没想对，还是 harness 没让它看到该看的、没让它做到该做的？分开问是为了找对下手的地方，但不是说只有后一种才改得了：模型没想对，写 harness 的人往往也能缓解，比如把提示写清楚、补上缺的上下文、给它能算准的工具、加上校验，把报错清楚地反馈给它；这些都不够，再考虑换模型。问题出在哪一边，和该从哪一边改，不一定是同一边。</p>
-  </div>
-
-  <h3><span class="lv l2">进阶</span>Workflow 还是 Agent</h3>
-  <div class="prose"><p>Anthropic 在《Building Effective Agents》里把 LLM 应用分成两类，这个划分被广泛引用：</p></div>
-  <div class="tbl"><table>
-    <thead><tr><th></th><th>Workflow（工作流）</th><th>Agent（智能体）</th></tr></thead>
-    <tbody>
-      <tr><td>谁决定流程</td><td>代码预先写死步骤，LLM 是其中的节点</td><td>LLM 在循环里自己决定下一步、调哪个工具、何时结束</td></tr>
-      <tr><td>典型模式</td><td>提示链、路由、并行、编排者-执行者、评估者-优化者</td><td>工具调用循环</td></tr>
-      <tr><td>优点</td><td>可预测、好测试、成本可控、延迟低</td><td>能处理开放、步骤数未知的任务</td></tr>
-      <tr><td>缺点</td><td>只能处理设计时想到的路径</td><td>成本和延迟高，错误会累积，需要护栏</td></tr>
-      <tr><td>适合</td><td>工单分类、文档抽取、固定审批流</td><td>写代码、排查问题、调研</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose"><p>工程判断的原则：<b>能用 workflow 解决的就不要上 agent</b>。agent 用在步骤不确定、需要探索和试错的任务上。实际系统常常是混合的：外层是固定流程，某个节点内部是一个 agent。</p>
-  <p>和上一节合起来看：workflow 和 agent 外面都有一层程序，区别在这层程序管到哪一步。workflow 的外层代码自己定好流程，只把模型当成一个函数来调用；agent 的外层只提供工具、循环和护栏，把流程交给模型。通常只有后一种被叫作 harness。</p></div>
-
-  <h3><span class="lv l3">深入</span>为什么 harness 决定上限</h3>
-  <div class="prose">
-  <p>模型只能看到 harness 给它的东西、只能做 harness 允许的事。工具描述写得含糊、上下文塞满噪音、没有压缩策略、错误信息看不懂，再强的模型也会表现很差。同一个模型在不同 coding agent 里的基准分数可以差出一大截，差异全部来自 harness。</p>
-  <p>harness 要回答的，就是<a href="index.html#map">首页本质地图</a>里那七个不变的问题。每个问题都来自模型的一条硬约束，后面每一章回答其中一两个：</p>
-  <ol>
-    <li><b>动手</b>：模型只产出 token，输出怎么变成动作？（第 3、4、7 章）</li>
-    <li><b>上下文</b>：窗口有限还越长越差，每一轮放什么？（第 5、6、8 章）</li>
-    <li><b>状态</b>：模型无状态，上下文之外存什么、怎么接回来？（第 8、10 章）</li>
-    <li><b>连接</b>：外部系统和能力怎么接进来？（第 11、16 章）</li>
-    <li><b>分工</b>：工作怎么拆，流程由谁决定？（本章、第 9 章）</li>
-    <li><b>验证</b>：输出会自信地出错，怎么知道做对了？（第 2、15 章）</li>
-    <li><b>防护</b>：出错或被攻击时怎么控制损失？（第 12–14 章）</li>
-  </ol>
-  <p>这七个问题从 2023 年到现在没有变过，变的是每个问题的解法放在哪里：提示词、harness 代码、开放标准、厂商 API，还是模型权重。</p>
-  </div>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">极简：system prompt 几百 token、默认 4 个工具，计划模式和 subagent 都放在扩展里。</span><span class="pf">README · “a minimal, extensible agent harness”</span></summary><div class="pb">
-    <p>pi 对这些问题的回答都偏“极简”：system prompt 只有几百 token，默认只有 4 个工具，不逐个审批工具调用，subagent 和计划模式不进核心而是作为扩展示例提供。读它的源码，等于看一个“只保留必要部分”的 harness 长什么样，这比读一个功能堆满的产品更容易看清本质。</p>
-  </div></details>
-
-  <h3><span class="lv l3">深入</span>前瞻：模型越来越强，harness 会变薄吗</h3>
-  <div class="prose">
-  <p><b>说对了一半。</b>“变薄”的是 harness 里<b>替模型思考</b>的那部分；<b>替模型做事、给模型把关</b>的那部分不但没变薄，还在变厚。还有一部分既没消失也不在 harness 里了，而是<b>转给</b>了模型训练或厂商 API。</p>
-  </div>
-  <div class="thin">
-    <div class="down"><h4>变薄</h4><div class="sub">替模型思考的脚手架</div><ul>
-      <li>长篇 system prompt、大量“务必”“不要”的提醒</li>
-      <li>ReAct 式 Thought/Action 文本模板</li>
-      <li>写死的规划步骤、强制更新待办清单</li>
-      <li>解析失败重试、格式修复</li>
-      <li>为弱模型定制的复杂编辑格式</li>
-      <li>固定的 RAG 检索流水线</li>
-    </ul></div>
-    <div class="sink"><h4>移交</h4><div class="sub">还在，但交给了模型或厂商</div><ul>
-      <li>推理与工具调用交织<span class="to">训练进模型</span></li>
-      <li>跨多个上下文窗口持续工作<span class="to">训练进模型</span></li>
-      <li>压缩、清理旧工具结果<span class="to">厂商 API</span></li>
-      <li>工具按需加载、代码执行<span class="to">厂商 API</span></li>
-      <li>结构化输出、前缀缓存<span class="to">厂商 API</span></li>
-    </ul></div>
-    <div class="up"><h4>变厚</h4><div class="sub">替模型做事和把关</div><ul>
-      <li>沙箱、权限、凭据代理</li>
-      <li>长时任务的状态、检查点、交接</li>
-      <li>验证手段：测试、浏览器、类型检查</li>
-      <li>并行 agent 的编排与隔离</li>
-      <li>评测、可观测、成本控制</li>
-      <li>多租户、审计、合规</li>
-    </ul></div>
-  </div>
-  <div class="prose">
-  <p>这三列背后有一个机制：<b>能写成示范、或者能用程序判对错的行为，更有机会被训练进模型</b>（第 2 章讲怎么训练进去），所以“替模型想”的那一列倾向于变薄。这是倾向，不是定律：哪段脚手架真能删，要在你的模型和任务上评测才知道。要真的碰外部世界、保存状态、承担责任的事，没法写进权重，所以“替模型做事”的那一列不会因为模型变强而消失。</p>
-  <p>几个佐证：</p>
-  <ul>
-    <li><b>脚手架在被删。</b>Claude Code 的负责人公开说过，每出一个新模型，团队都会审一遍 system prompt，删掉新模型已经不需要的提醒；他们把 Claude Code 描述为“尽可能薄的一层封装”，并预期很多脚手架会被练进模型。有团队报告过某个模型在上下文快满时会“赶工收尾”，于是加了“清空上下文 + 结构化交接”来绕开，到下一代模型这个毛病消失了，这段代码也就成了死代码。</li>
-    <li><b>但 harness 的分量没变小。</b>Terminal-Bench 这类按“模型 + harness”组合打分的基准上，同一个模型换不同 harness，成绩可以差十几个百分点。</li>
-    <li><b>工程重心在转移。</b>OpenAI 的 harness engineering 实验里，人几乎不写代码，工作量全花在让 agent 能自己验证、自己发现问题的环境上：文档结构、lint 规则、可观测性、测试。</li>
-  </ul>
-  <p><b>对设计的启示：</b></p>
-  <ol>
-    <li><b>为下一代模型设计。</b>针对当前模型缺陷的补丁，写的时候就预期它会被删。把它们放在扩展或配置里，而不是核心里。pi 把计划模式、子 agent 都放到扩展里，就是这个思路。</li>
-    <li><b>用评测决定删什么。</b>每换一个模型，关掉某个脚手架跑一遍评测（消融），没有收益就删（第 15 章）。</li>
-    <li><b>把力气花在“变厚”的那一列。</b>沙箱、状态、验证、评测，这些不会被模型取代，是长期的工程价值所在。</li>
-    <li><b>警惕被厂商 API 锁定。</b>交给厂商 API 的能力用起来省事，但会让 harness 和某一家绑定（第 5 章服务端压缩）。</li>
-  </ol>
-  </div>
-  <div class="ahead"><b class="h">前瞻 · 本章</b><ul>
-    <li><span class="cf sure">已有证据</span>agent 的基本形态（LLM + 工具 + 循环）到目前为止没有变，近两年的新东西都是在这个形态上加东西，没有替换它。</li>
-    <li><span class="cf sure">已有证据</span>已有团队公开说明，每换一代模型就删掉一批提示和脚手架，同时在沙箱、验证、评测上投入更多（见上面的佐证）。</li>
-    <li><span class="cf likely">作者判断</span>这个趋势会延续：“替模型思考”的部分继续变薄，“替模型做事和把关”的部分继续变厚。具体到某一段代码，仍以消融评测为准。</li>
-    <li><span class="cf likely">作者判断</span>模型和 harness 一起训练会越来越普遍（厂商用自家 harness 做强化学习），同一个模型在“原厂 harness”里往往表现更好，第三方 harness 需要按模型适配工具格式（第 7 章）。</li>
-    <li><span class="cf open">有争议</span>workflow 会不会被 agent 全面取代。模型越强，agent 的适用面越大；但成本、可预测性、合规审计这些理由不会因为模型变强而消失。</li>
+<div class="eyebrow">第 1 章 <span class="imp must">核心</span></div>
+<h2>Agent、Workflow 与 Harness</h2>
+<h3><span class="lv l1">基础</span>LLM 只是一个无状态函数</h3>
+<div class="prose">
+<p>LLM 输入一串消息，输出下一条消息。它不能读文件，不能调接口，也记不住上一次请求。所有“能力”都来自包在它外面的程序。</p>
+<p><b>Harness</b> 就是这层程序：维护对话历史、提供并执行工具、拼装上下文、保存会话、处理权限、发出事件。Claude Code、Codex CLI、pi 都是 harness。</p>
+</div>
+<div class="analogy"><div class="tag">Java 类比</div><p>模型像一个无状态的远程服务（同样的输入也可能得到不同的输出） <code>Message complete(List&lt;Message&gt; history)</code>；harness 像 Spring + Tomcat，负责生命周期、路由、状态、拦截器和持久化。</p>
+</div>
+<details class="term" data-term="agent"><summary><b>Agent</b><span class="st stable">稳定</span><span class="one">含义从“全自动 AI 员工”变成了“在循环里调用工具的 LLM”</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2023-03</time><span>AutoGPT、BabyAGI 一度走红：让 GPT-4 自己拆目标、自己循环。演示惊艳，实际任务几乎跑不通，热度几个月就退了。</span></li>
+<li><time>2023–24</time><span>LangChain agents、AutoGen、CrewAI 等框架把“agent”做成了一套抽象，概念多、可控性差。</span></li>
+<li><time>2024-12</time><span>Anthropic《Building Effective Agents》给出今天通用的定义，并和 workflow 划清界限。</span></li>
+<li><time>2025</time><span>Claude Code、Codex CLI、Cursor agent 等 coding agent 正式投入使用，“agent”第一次大规模可用。</span></li>
+</ul>
+<p class="rel"><b>为什么 2023 年那批失败了：</b>当时模型的工具调用、长程规划和自我纠错都不够，harness 再花哨也补不上。<b>这和第 1 章结尾的“变薄”是同一个规律</b>：模型能力不到位时，外层程序弥补不了；模型到位后，脚手架反而要拆。</p>
+</div></details>
+<details class="term" data-term="scaffold"><summary><b>Harness / Scaffold</b><span class="st debate">仍在演变</span><span class="one">2024 年多叫 scaffold，2025 年起叫 harness，2026 年出现了 harness engineering</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2024</time><span>SWE-agent 等研究工作把模型外面的程序叫 scaffold（脚手架），强调它是临时的辅助结构。</span></li>
+<li><time>2025</time><span>Claude Agent SDK、Codex 等开始把这层叫 harness（挽具），强调它“驾驭”模型、长期存在。</span></li>
+<li><time>2026-02</time><span>OpenAI 发表《Harness engineering》：一个团队五个月不手写代码，全部由 Codex 生成；工程师的工作变成设计环境、约束和反馈回路。</span></li>
+</ul>
+<p class="rel"><b>和相邻的词：</b>prompt engineering（写好一段提示）⊂ context engineering（每一轮放什么进上下文，第 5 章）⊂ harness engineering（上下文之外，再加工具、沙箱、验证、反馈回路的整套环境）。三个词是<b>逐层扩大的关系，不是新词替代旧词</b>。</p>
+</div></details>
+<h3><span class="lv l1">基础</span>Agent = 模型 + Harness</h3>
+<div class="prose">
+<p>agent 和 harness 不是两个并列的零件。<b>harness 是包在模型外面、负责运行和控制的那层程序；agent 是把模型放进 harness、跑起来之后的整个系统。</b>这层程序可以自己写，可以用 SDK，也可以交给厂商托管（第 3 章）。“Agent = 模型 + Harness”是工程上的简化说法：给模型套一层程序不一定就是 agent，还要看下一步由谁决定（下一节）。</p>
+<p>沿用上面的 Spring + Tomcat 类比：harness 像 Tomcat 这样的容器，它不是被动的盒子，而是要管生命周期、拦截和状态；agent 像部署进去、正在运行的应用。不同的是，这个应用的规矩可以事先定好（业务规则、权限、怎样才算验收通过），但具体一步步怎么走没有写死，由模型每一轮当场决定。</p>
+<p>两边各管一半：</p>
+</div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th></th>
+<th>模型</th>
+<th>Harness</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>负责</td>
+<td><b>决定做什么</b>：理解目标，选下一步调哪个工具、填什么参数，判断什么时候该收尾、什么时候该问人</td>
+<td><b>负责做到、负责把关</b>：执行工具，把结果送回去，维护历史，拼装上下文，拦截危险操作，执行审批和预算上限，保存会话</td>
+</tr>
+<tr>
+<td>做不到</td>
+<td>直接碰外部世界；记住上一次请求（历史要由外面保存，再送回给它）</td>
+<td>替模型选任务路径。它可以定规矩：改完必须跑测试、失败重试几次、哪些操作要审批、预算用完就停；但如果连每一步怎么走都由代码写死，就成了 workflow（下一节）。workflow 不比 agent 低级，只是适合的任务不同</td>
+</tr>
+<tr>
+<td>只换这一边</td>
+<td>同一个 harness 换上更强的模型，规划、纠错、何时停下通常会变好，但不保证每一项都变好，要在自己的任务上评测（第 15 章）</td>
+<td>同一个模型换个 harness，能用的工具、能看到的上下文都变了，成绩可能差一大截</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>两边靠一个循环接起来（第 4 章展开）：harness 把历史和工具清单发给模型 → 模型回一条消息，可能带着工具调用 → harness 执行工具，把结果追加到历史里 → 再发给模型，直到模型不再调用工具。<b>循环是 harness 写的，每一圈往哪走由模型决定。</b></p>
+<p>注意，“模型不再调用工具”只说明这一段跑完了，不等于任务做成了：模型可能是做完了，也可能是要问用户，或者已经走不下去了，做没做成要另外验证。harness 也可以中途让循环暂停（等人审批），或者因为轮数、预算、超时、用户取消把它终止（第 4 章）。</p>
+<p>日常说法里这两个词常被混用。“Claude Code 是一个 agent”说的是它带着模型运行时的样子；“Claude Code 是一个 harness”说的是去掉模型后剩下的那份程序。讨论设计时最好分开问：失败是因为模型没想对，还是 harness 没让它看到该看的、没让它做到该做的？分开问是为了找对下手的地方，但不是说只有后一种才改得了：模型没想对，写 harness 的人往往也能缓解，比如把提示写清楚、补上缺的上下文、给它能算准的工具、加上校验，把报错清楚地反馈给它；这些都不够，再考虑换模型。问题出在哪一边，和该从哪一边改，不一定是同一边。</p>
+</div>
+<h3><span class="lv l2">进阶</span>Workflow 还是 Agent</h3>
+<div class="prose">
+<p>Anthropic 在《Building Effective Agents》里把 LLM 应用分成两类，这个划分被广泛引用：</p>
+</div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th></th>
+<th>Workflow（工作流）</th>
+<th>Agent（智能体）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>谁决定流程</td>
+<td>代码预先写死步骤，LLM 是其中的节点</td>
+<td>LLM 在循环里自己决定下一步、调哪个工具、何时结束</td>
+</tr>
+<tr>
+<td>典型模式</td>
+<td>提示链、路由、并行、编排者-执行者、评估者-优化者</td>
+<td>工具调用循环</td>
+</tr>
+<tr>
+<td>优点</td>
+<td>可预测、好测试、成本可控、延迟低</td>
+<td>能处理开放、步骤数未知的任务</td>
+</tr>
+<tr>
+<td>缺点</td>
+<td>只能处理设计时想到的路径</td>
+<td>成本和延迟高，错误会累积，需要护栏</td>
+</tr>
+<tr>
+<td>适合</td>
+<td>工单分类、文档抽取、固定审批流</td>
+<td>写代码、排查问题、调研</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>工程判断的原则：<b>能用 workflow 解决的就不要上 agent</b>。agent 用在步骤不确定、需要探索和试错的任务上。实际系统常常是混合的：外层是固定流程，某个节点内部是一个 agent。</p>
+<p>和上一节合起来看：workflow 和 agent 外面都有一层程序，区别在这层程序管到哪一步。workflow 的外层代码自己定好流程，只把模型当成一个函数来调用；agent 的外层只提供工具、循环和护栏，把流程交给模型。通常只有后一种被叫作 harness。</p>
+</div>
+<h3><span class="lv l3">深入</span>为什么 harness 决定上限</h3>
+<div class="prose">
+<p>模型只能看到 harness 给它的东西、只能做 harness 允许的事。工具描述写得含糊、上下文塞满噪音、没有压缩策略、错误信息看不懂，再强的模型也会表现很差。同一个模型在不同 coding agent 里的基准分数可以差出一大截，差异全部来自 harness。</p>
+<p>harness 要回答的，就是<a href="index.html#map">首页本质地图</a>里那七个不变的问题。每个问题都来自模型的一条硬约束，后面每一章回答其中一两个：</p>
+<ol>
+<li><b>动手</b>：模型只产出 token，输出怎么变成动作？（第 3、4、7 章）</li>
+<li><b>上下文</b>：窗口有限还越长越差，每一轮放什么？（第 5、6、8 章）</li>
+<li><b>状态</b>：模型无状态，上下文之外存什么、怎么接回来？（第 8、10 章）</li>
+<li><b>连接</b>：外部系统和能力怎么接进来？（第 11、16 章）</li>
+<li><b>分工</b>：工作怎么拆，流程由谁决定？（本章、第 9 章）</li>
+<li><b>验证</b>：输出会自信地出错，怎么知道做对了？（第 2、15 章）</li>
+<li><b>防护</b>：出错或被攻击时怎么控制损失？（第 12–14 章）</li>
+</ol>
+<p>这七个问题从 2023 年到现在没有变过，变的是每个问题的解法放在哪里：提示词、harness 代码、开放标准、厂商 API，还是模型权重。</p>
+</div>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">极简：system prompt 几百 token、默认 4 个工具，计划模式和 subagent 都放在扩展里。</span><span class="pf">README · “a minimal, extensible agent harness”</span></summary><div class="pb">
+<p>pi 对这些问题的回答都偏“极简”：system prompt 只有几百 token，默认只有 4 个工具，不逐个审批工具调用，subagent 和计划模式不进核心而是作为扩展示例提供。读它的源码，等于看一个“只保留必要部分”的 harness 长什么样，这比读一个功能堆满的产品更容易看清本质。</p>
+</div></details>
+<h3><span class="lv l3">深入</span>前瞻：模型越来越强，harness 会变薄吗</h3>
+<div class="prose">
+<p><b>说对了一半。</b>“变薄”的是 harness 里<b>替模型思考</b>的那部分；<b>替模型做事、给模型把关</b>的那部分不但没变薄，还在变厚。还有一部分既没消失也不在 harness 里了，而是<b>转给</b>了模型训练或厂商 API。</p>
+</div>
+<div class="thin">
+  <div class="down"><h4>变薄</h4><div class="sub">替模型思考的脚手架</div><ul>
+    <li>长篇 system prompt、大量“务必”“不要”的提醒</li>
+    <li>ReAct 式 Thought/Action 文本模板</li>
+    <li>写死的规划步骤、强制更新待办清单</li>
+    <li>解析失败重试、格式修复</li>
+    <li>为弱模型定制的复杂编辑格式</li>
+    <li>固定的 RAG 检索流水线</li>
   </ul></div>
-
-  <div class="qa-wrap">
-    <div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
-    <details class="qa"><summary>什么是 Agent？和直接调用 LLM、和工作流有什么区别？</summary><div class="ans">
-      <ul>
-        <li>一句话：<b>LLM 在循环中自主选择并调用工具，根据结果决定下一步，直到完成目标</b>。</li>
-        <li>和单次调用比：多了循环、工具和状态。单次调用只能“说”，agent 能“做”。</li>
-        <li>和工作流比：区别在<b>控制流由谁决定</b>，代码还是模型。</li>
-        <li>和 harness 比：harness 是包在模型外面的程序，agent 是“模型 + harness”跑起来的整个系统。模型决定做什么，harness 负责做到。</li>
-        <li>能用工作流解决的不要上 agent；实际系统常是两者混合。</li>
-      </ul>
-      <div class="follow"><b>再深一步：</b>你的场景为什么选 agent？→ 准备一个具体例子，说明任务路径无法预先枚举。</div>
-    </div></details>
-    <details class="qa"><summary>为什么说 harness 比模型更决定 agent 的效果？</summary><div class="ans">
-      <ul>
-        <li>模型的输入完全由 harness 拼装，模型的动作完全由 harness 执行。</li>
-        <li>工具设计、上下文管理、错误反馈、验证手段，这些都在 harness 里，直接决定成功率。</li>
-        <li>可以举 pi 的例子：极短的 system prompt + 4 个通用工具，依然能完成复杂编码任务，说明能力主要来自“好的工具 + 好的上下文”，而不是长提示词。</li>
-      </ul>
-    </div></details>
-    <details class="qa"><summary>模型越来越强，harness 会不会被模型取代？</summary><div class="ans">
-      <ul>
-        <li>分开看：替模型思考的部分（长提示、模板、固定规划）在变薄；替模型做事和把关的部分（沙箱、状态、验证、评测、成本）在变厚；还有一部分转给了模型训练和厂商 API。</li>
-        <li>证据：Claude Code 团队每代模型都删提醒；同一模型换 harness 在 Terminal-Bench 上差十几个点；OpenAI 的 harness engineering 把重心放在验证环境上。</li>
-        <li>做法：补丁放扩展里，预期会删；用消融评测决定删什么；投入放在不会被取代的基础设施上。</li>
-      </ul>
-      <div class="follow"><b>再深一步：</b>那 harness 工程师的价值在哪？→ 和后端工程师在数据库越来越强之后的价值一样：数据库优化器变强了，没人再手写执行计划，但事务、隔离、容灾、容量规划的工作一点没少。</div>
-    </div></details>
-  </div>
-  <label class="understood"><input type="checkbox" data-done="c1"> 我能讲清 agent、workflow、harness 的关系</label>
+  <div class="sink"><h4>移交</h4><div class="sub">还在，但交给了模型或厂商</div><ul>
+    <li>推理与工具调用交织<span class="to">训练进模型</span></li>
+    <li>跨多个上下文窗口持续工作<span class="to">训练进模型</span></li>
+    <li>压缩、清理旧工具结果<span class="to">厂商 API</span></li>
+    <li>工具按需加载、代码执行<span class="to">厂商 API</span></li>
+    <li>结构化输出、前缀缓存<span class="to">厂商 API</span></li>
+  </ul></div>
+  <div class="up"><h4>变厚</h4><div class="sub">替模型做事和把关</div><ul>
+    <li>沙箱、权限、凭据代理</li>
+    <li>长时任务的状态、检查点、交接</li>
+    <li>验证手段：测试、浏览器、类型检查</li>
+    <li>并行 agent 的编排与隔离</li>
+    <li>评测、可观测、成本控制</li>
+    <li>多租户、审计、合规</li>
+  </ul></div>
+</div>
+<div class="prose">
+<p>这三列背后有一个机制：<b>能写成示范、或者能用程序判对错的行为，更有机会被训练进模型</b>（第 2 章讲怎么训练进去），所以“替模型想”的那一列倾向于变薄。这是倾向，不是定律：哪段脚手架真能删，要在你的模型和任务上评测才知道。要真的碰外部世界、保存状态、承担责任的事，没法写进权重，所以“替模型做事”的那一列不会因为模型变强而消失。</p>
+<p>几个佐证：</p>
+<ul>
+<li><b>脚手架在被删。</b>Claude Code 的负责人公开说过，每出一个新模型，团队都会审一遍 system prompt，删掉新模型已经不需要的提醒；他们把 Claude Code 描述为“尽可能薄的一层封装”，并预期很多脚手架会被练进模型。有团队报告过某个模型在上下文快满时会“赶工收尾”，于是加了“清空上下文 + 结构化交接”来绕开，到下一代模型这个毛病消失了，这段代码也就成了死代码。</li>
+<li><b>但 harness 的分量没变小。</b>Terminal-Bench 这类按“模型 + harness”组合打分的基准上，同一个模型换不同 harness，成绩可以差十几个百分点。</li>
+<li><b>工程重心在转移。</b>OpenAI 的 harness engineering 实验里，人几乎不写代码，工作量全花在让 agent 能自己验证、自己发现问题的环境上：文档结构、lint 规则、可观测性、测试。</li>
+</ul>
+<p><b>对设计的启示：</b></p>
+<ol>
+<li><b>为下一代模型设计。</b>针对当前模型缺陷的补丁，写的时候就预期它会被删。把它们放在扩展或配置里，而不是核心里。pi 把计划模式、子 agent 都放到扩展里，就是这个思路。</li>
+<li><b>用评测决定删什么。</b>每换一个模型，关掉某个脚手架跑一遍评测（消融），没有收益就删（第 15 章）。</li>
+<li><b>把力气花在“变厚”的那一列。</b>沙箱、状态、验证、评测，这些不会被模型取代，是长期的工程价值所在。</li>
+<li><b>警惕被厂商 API 锁定。</b>交给厂商 API 的能力用起来省事，但会让 harness 和某一家绑定（第 5 章服务端压缩）。</li>
+</ol>
+</div>
+<div class="ahead"><b class="h">前瞻 · 本章</b><ul>
+<li><span class="cf sure">已有证据</span>agent 的基本形态（LLM + 工具 + 循环）到目前为止没有变，近两年的新东西都是在这个形态上加东西，没有替换它。</li>
+<li><span class="cf sure">已有证据</span>已有团队公开说明，每换一代模型就删掉一批提示和脚手架，同时在沙箱、验证、评测上投入更多（见上面的佐证）。</li>
+<li><span class="cf likely">作者判断</span>这个趋势会延续：“替模型思考”的部分继续变薄，“替模型做事和把关”的部分继续变厚。具体到某一段代码，仍以消融评测为准。</li>
+<li><span class="cf likely">作者判断</span>模型和 harness 一起训练会越来越普遍（厂商用自家 harness 做强化学习），同一个模型在“原厂 harness”里往往表现更好，第三方 harness 需要按模型适配工具格式（第 7 章）。</li>
+<li><span class="cf open">有争议</span>workflow 会不会被 agent 全面取代。模型越强，agent 的适用面越大；但成本、可预测性、合规审计这些理由不会因为模型变强而消失。</li>
+</ul>
+</div>
+<div class="qa-wrap">
+<div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
+<details class="qa"><summary>什么是 Agent？和直接调用 LLM、和工作流有什么区别？</summary><div class="ans">
+<ul>
+<li>一句话：<b>LLM 在循环中自主选择并调用工具，根据结果决定下一步，直到完成目标</b>。</li>
+<li>和单次调用比：多了循环、工具和状态。单次调用只能“说”，agent 能“做”。</li>
+<li>和工作流比：区别在<b>控制流由谁决定</b>，代码还是模型。</li>
+<li>和 harness 比：harness 是包在模型外面的程序，agent 是“模型 + harness”跑起来的整个系统。模型决定做什么，harness 负责做到。</li>
+<li>能用工作流解决的不要上 agent；实际系统常是两者混合。</li>
+</ul>
+<div class="follow"><b>再深一步：</b>你的场景为什么选 agent？→ 准备一个具体例子，说明任务路径无法预先枚举。</div>
+</div></details>
+<details class="qa"><summary>为什么说 harness 比模型更决定 agent 的效果？</summary><div class="ans">
+<ul>
+<li>模型的输入完全由 harness 拼装，模型的动作完全由 harness 执行。</li>
+<li>工具设计、上下文管理、错误反馈、验证手段，这些都在 harness 里，直接决定成功率。</li>
+<li>可以举 pi 的例子：极短的 system prompt + 4 个通用工具，依然能完成复杂编码任务，说明能力主要来自“好的工具 + 好的上下文”，而不是长提示词。</li>
+</ul>
+</div></details>
+<details class="qa"><summary>模型越来越强，harness 会不会被模型取代？</summary><div class="ans">
+<ul>
+<li>分开看：替模型思考的部分（长提示、模板、固定规划）在变薄；替模型做事和把关的部分（沙箱、状态、验证、评测、成本）在变厚；还有一部分转给了模型训练和厂商 API。</li>
+<li>证据：Claude Code 团队每代模型都删提醒；同一模型换 harness 在 Terminal-Bench 上差十几个点；OpenAI 的 harness engineering 把重心放在验证环境上。</li>
+<li>做法：补丁放扩展里，预期会删；用消融评测决定删什么；投入放在不会被取代的基础设施上。</li>
+</ul>
+<div class="follow"><b>再深一步：</b>那 harness 工程师的价值在哪？→ 和后端工程师在数据库越来越强之后的价值一样：数据库优化器变强了，没人再手写执行计划，但事务、隔离、容灾、容量规划的工作一点没少。</div>
+</div></details>
+</div>
+<div class="selftest" data-quiz>
+<div class="qa-head"><span>自测</span><span class="score">2 题</span></div>
+<div>
+<div class="q" data-a="1"><div class="qt">1. 哪种场景最适合用 workflow 而不是 agent？</div><div class="opts"><button class="opt">排查原因未知的线上故障</button><button class="opt">按固定规则给工单分类并路由</button><button class="opt">修复一个 GitHub issue</button></div><div class="why" hidden><span class="verdict"></span>步骤固定、可枚举的任务用 workflow，更可控、更便宜。</div></div>
+<div class="q" data-a="1"><div class="qt">2. 关于“模型越强，harness 越薄”，哪个说法最准确？</div><div class="opts"><button class="opt">harness 整体会消失</button><button class="opt">替模型思考的脚手架变薄，沙箱、状态、验证、评测变厚</button><button class="opt">harness 越来越厚，与模型无关</button></div><div class="why" hidden><span class="verdict"></span>还有一部分转给了模型训练和厂商 API，比如推理交织、服务端压缩、工具按需加载。</div></div>
+</div>
+</div>
+<label class="understood"><input type="checkbox" data-done="c1"> 我能讲清 agent、workflow、harness 的关系</label>
 </section>
 
-<!-- 2 -->
 <section class="ch" id="c2" data-t="模型从哪来" data-part="原理" data-imp="must">
-  <div class="eyebrow">第 2 章 <span class="imp must">核心</span></div>
-  <h2>模型从哪来：能力是怎么训练出来的</h2>
-  <p class="lead">手册里反复出现“被训练进模型”“模型和 harness 一起训练”。这一章讲清它们的机制。不讲 Transformer 内部，只讲和 agent 有关的部分：模型的硬约束从哪来，会用工具的本事从哪来。第一次读只看两节“基础”即可，其余小节可以等读完第 3、4 章的闭环再回来。</p>
-
-  <h3><span class="lv l1">基础</span>预训练只学一件事：猜下一个 token</h3>
-  <div class="prose">
-  <p>预训练拿海量文本，遮住下一个 token 让模型猜，按它给正确答案的概率打分（交叉熵损失）、成批地调参数，在万亿级 token 上反复做。文本自带答案，不需要人标注。</p>
-  <p>agent 面对的几条硬约束，常被笼统地说成“因为模型只会猜下一个 token”。其实它们来源不同：有的来自训练目标，有的来自模型架构，有的来自推理接口和部署预算。下表说的是本书讨论的主流模型，即自回归（decoder-only）Transformer、通过无状态 API 调用的那一类：</p>
-  </div>
-  <div class="tbl"><table>
-    <thead><tr><th>约束</th><th>主要来源</th><th>后面用到</th></tr></thead>
-    <tbody>
-      <tr><td>无状态：记忆只能靠每次重发历史</td><td><b>推理接口。</b>推理时权重不更新，常见 API 也不在两次请求之间保留模型内部状态。这不是“猜下一个 token”本身决定的：厂商可以在服务端代存历史（第 3 章的 Responses API），研究里也有 Transformer-XL 这类跨片段保留状态的架构</td><td>第 3、10 章</td></tr>
-      <tr><td>上下文窗口有限，越长越难用好</td><td><b>架构与预算。</b>注意力计算和 KV 缓存随长度增长，位置编码和训练时见过的长度有限，部署时还有显存和成本预算</td><td>第 5 章</td></tr>
-      <tr><td>相同前缀算出的中间结果（KV）可以复用</td><td><b>架构。</b>因果注意力只回看前面的 token，前面的计算不受后文影响</td><td>第 6 章</td></tr>
-      <tr><td>会自信地出错，需要外部验证</td><td><b>训练目标。</b>预训练学的是“像训练数据”，后训练学的是“像示范”或“拿高分”，都不直接等于“正确”</td><td>第 15 章</td></tr>
-      <tr><td>无法可靠区分哪段文字该执行，哪段只是材料</td><td><b>输入表示。</b>指令和材料拼在同一个 token 序列里，没有硬隔离的通道；后训练能降低被带偏的概率，但不能杜绝</td><td>第 13 章</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose"><p>分清来源，才能判断哪条约束会松动、怎么松动。服务端状态改变的是“谁来保存历史”，模型每次仍要从输入重新读起；更长的窗口放宽了上限，却没有消除越长越不准。</p></div>
-  <div class="prose">
-  <p>预训练出来的模型只会续写。问它“香港天气怎么样？用摄氏度”，它很可能续写出更多关于天气的问题，而不是输出一个天气查询的调用。让它听指令、会用工具，靠后训练。</p>
-  </div>
-
-  <h3><span class="lv l1">基础</span>后训练的两种方法</h3>
-  <div class="tbl"><table>
-    <thead><tr><th>方法</th><th>怎么学</th><th>例子</th><th>适合</th></tr></thead>
-    <tbody>
-      <tr><td>SFT（监督微调）</td><td>照着示范学：给“请求 → 正确回复”的样例，仍用猜下一个 token 的目标训练</td><td>“查香港天气，用摄氏度” → <code>{"name":"get_weather","arguments":{"city":"Hong Kong","unit":"celsius"}}</code></td><td>写得出标准答案的行为：输出格式、工具调用、回答风格</td></tr>
-      <tr><td>强化学习（RL）</td><td>自己试、按分数学：同一题生成几个答案，打分，提高高分答案的概率</td><td>写 <code>is_even(n)</code>，跑测试，通过率就是分数</td><td>写不出唯一示范、但判得出好坏的任务：代码、数学、多步工具任务</td></tr>
-    </tbody>
-  </table></div>
-  <div class="java">
-    <div class="tag">Java 类比</div>
-    <p>SFT 像照着评审意见逐行改代码；RL 像只给你 CI 的红绿结果，自己摸索怎么让它变绿。后者不需要有人写出标准答案，只需要有一个靠得住的检查。</p>
-  </div>
-
-  <h3><span class="lv l2">进阶</span>缩写很多，其实只有两个维度</h3>
-  <div class="prose"><p>后训练的论文里缩写很多：RLHF、RLAIF、RLVR、PPO、GRPO……它们分属两个互不相干的维度：</p></div>
-  <div class="tbl"><table>
-    <thead><tr><th>维度</th><th>选项</th><th>回答的问题</th></tr></thead>
-    <tbody>
-      <tr><td>反馈从哪来</td><td>人来比较两个回答（RLHF）· 模型按评分标准打分（RLAIF）· 程序判对错：测试、答案核对、任务的最终状态（RLVR）</td><td>谁说这个答案好</td></tr>
-      <tr><td>怎么更新参数</td><td>PPO：和“预期得分”比，并限制每一步改动的幅度 · GRPO：同一题的几个答案互相比，高于组内平均的加强</td><td>拿到分数之后怎么改模型</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose"><p>ChatGPT 最初用的是“人来比较 + PPO”，DeepSeek-R1-Zero 用的是“程序判对错 + GRPO”。两个维度可以任意组合。这是“看本质不看名字”的一个小例子：<b>先找出维度，再把名字放进格子</b>，五个缩写就只剩两个问题。</p></div>
-  <details class="term" data-term="rlvr"><summary><b>RLHF → RLVR</b><span class="st hot">正流行</span><span class="one">反馈从“人来比较”扩展到“程序判对错”</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2022-03</time><span>OpenAI 的 InstructGPT：人对回答排序，训练一个奖励模型，再用 PPO 优化。这就是 RLHF，ChatGPT 的基础。</span></li>
-      <li><time>2022-12</time><span>Anthropic 的 Constitutional AI：让模型按一份原则给回答打分，替代一部分人工反馈，即 RLAIF。</span></li>
-      <li><time>2024-09</time><span>OpenAI o1：用强化学习训练推理。训练时多花算力、回答时多想一会儿，准确率都会提升。</span></li>
-      <li><time>2024-11</time><span>AI2 的 Tülu 3 报告把“用可验证的答案当奖励”称为 RLVR。</span></li>
-      <li><time>2025-01</time><span>DeepSeek-R1：R1-Zero 不做 SFT，只用规则判定的奖励（答案是否正确 + 输出格式是否合规）加 GRPO，就练出了长推理。正式发布的 R1 是多阶段的：少量示范 SFT、推理 RL、再一轮 SFT、再全面 RL（这一阶段除了规则奖励，也用奖励模型评判通用回答）。</span></li>
-      <li><time>2025–26</time><span>奖励扩展到多步 agent 任务：一次尝试就是一整条“读文件、改代码、跑测试”的轨迹，测试结果就是分数。</span></li>
-    </ul>
-    <p class="rel"><b>和其他词的关系：</b>RLHF / RLAIF / RLVR 说的是反馈从哪来，PPO / GRPO 说的是怎么更新，别混在一起。同一种“程序判对错”的验证器，也用在离线评测（第 15 章）和 agent 运行中的自我检查（第 9 章）。</p>
-  </div></details>
-
-  <h3><span class="lv l2">进阶</span>一次尝试，可以是一整条 agent 轨迹</h3>
-  <div class="prose">
-  <p>在数学题上，一次尝试（rollout）是一段解答。在 coding agent 上，一次尝试是一整条轨迹：读文件、改代码、跑测试……最后用隐藏测试或任务结束时的系统状态打分。</p>
-  <p>要跑这种训练，需要一个能真正执行工具的环境，也就是一个 harness。厂商通常用自家的 harness 来跑。这一点能解释后面好几章会遇到的现象：</p>
-  <ul>
-    <li><b>编辑格式和模型绑定。</b>GPT 系列熟悉 <code>apply_patch</code>，Claude 熟悉 <code>str_replace</code>，因为训练时用的就是它们（第 7 章）。</li>
-    <li><b>同一个模型在训练时用惯的那类 harness 里往往表现更好</b>，换一个接口不熟悉的 harness 可能差一截（第 1 章）。是否真的更好，要在同一模型、同一任务下评测。</li>
-    <li><b>推理块要原样回传。</b>模型是在“思考、调工具、带着思考继续”的轨迹上练出来的，中途丢掉思考，它就不在熟悉的状态里了（第 3 章）。</li>
-    <li><b>基准检查最终状态。</b>Terminal-Bench、SWE-bench 检查任务做完后机器或仓库的状态，和训练用的奖励是同一类东西（第 15 章）。</li>
-  </ul>
-  </div>
-  <div class="callout"><b class="h">关键认知</b>harness 不只是部署模型的地方，也是训练模型的地方。模型在什么样的 harness 里练过，就更熟悉什么样的 harness。</div>
-
-  <h3><span class="lv l3">深入</span>验证器看不到的地方，模型会钻空子</h3>
-  <div class="prose"><p>题目：时薪 12 美元，干了 50 分钟，挣多少？假如奖励只核对最后的数字：</p></div>
-  <div class="code"><div class="hd"><span>只看答案的奖励</span><span>示意</span></div><pre>解答 A：12 ÷ 60 × 50 = 10    #### 10    <span class="c">→ 奖励 1，过程正确</span>
-解答 B：12 + 50 = 10         #### 10    <span class="c">→ 奖励 1，过程是错的，答案碰对了</span></pre></div>
-  <div class="prose">
-  <p>奖励只看结果，错误的过程也会被加强。训练得足够久，模型会学会利用验证器的盲区（reward hacking），比如让测试通过却没修好问题，甚至去改测试本身。</p>
-  <p>这个教训贯穿三个地方：训练时的奖励、评测时的判分（第 15 章）、agent 运行时的自我检查（第 9 章）。它们本质上是同一个验证器用在不同时间点。验证器写得越全，三处都越可靠。</p>
-  </div>
-
-  <h3><span class="lv l3">深入</span>什么会被训练进模型</h3>
-  <div class="prose">
-  <p>把上面合起来，就得到<a href="index.html#learn">首页</a>的那条经验规律：<b>能写成示范的（SFT）、能用程序判对错的（RLVR），更有机会被训练进模型。</b>这是倾向，不是定律：能判对错不代表模型容易试出对的答案，奖励可能有漏洞（见上一节），学会示范也不代表能可靠泛化，练不练还要看数据和成本。已经发生的例子：</p>
-  <ul>
-    <li>ReAct 的 Thought/Action 文本模板 → 主流推理模型把“想、做、看”练进了权重，显式模板不再是必需（第 4 章）。</li>
-    <li>强制更新待办清单、防止“谎称完成”的提醒 → Claude Code 团队报告，在他们的新模型上某个这类机制已经不需要（第 9 章）。这是一家在自家模型上的观察；换了模型或任务，是否还需要，要用评测确认。</li>
-    <li>多 agent 的协调：Kimi K2.5 用强化学习只训练协调者、子 agent 保持不动，让模型自己决定什么时候拆分、派给谁。分工这件事也开始被训练进去。</li>
-  </ul>
-  <p>练不进模型的是沙箱、权限、状态持久化、审计、成本控制。它们不是模型的“行为”，而是环境；验证环境本身还是奖励的来源。</p>
-  </div>
-  <div class="java">
-    <div class="tag">Java 类比</div>
-    <p>像 JVM 的 JIT：反复执行、可度量的热点代码会被编译成机器码，你手写的那层微优化就多余了；但 GC、类加载、安全检查这些运行时职责，不会因为 JIT 变强而消失。</p>
-  </div>
-  <div class="ahead"><b class="h">前瞻 · 本章</b><ul>
-    <li><span class="cf sure">已有证据</span>公开的后训练报告（Tülu 3、DeepSeek-R1 等）把可验证奖励作为代码、数学这类任务的主要训练信号之一。验证器的质量直接影响模型在这些任务上能练到多好。</li>
-    <li><span class="cf likely">作者判断</span>训练环境越来越像真实的 harness：真实仓库、真实终端、长任务。更多 harness 里的行为会被练进模型，第三方 harness 要跟着模型调整工具格式。</li>
-    <li><span class="cf likely">作者判断</span>“能不能写出验证器”会成为判断一个领域 agent 进步快慢的先行指标：有测试的领域（代码）进步最快，难以判对错的领域（写作、设计）慢得多。</li>
-    <li><span class="cf open">有争议</span>多 agent 的协调能被训练到什么程度。公开的对比还很少，各家比较时的预算条件也不同。</li>
-  </ul></div>
-
-  <div class="qa-wrap">
-    <div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
-    <details class="qa"><summary>为什么同一个模型换一个 harness，表现会差很多？</summary><div class="ans">
-      <ul>
-        <li>后训练用 harness 跑 rollout，工具格式、编辑格式、推理块的回传方式，都是模型在训练时见惯了的。</li>
-        <li>换一个 harness，等于换了一套它不熟悉的接口。</li>
-        <li>再加上第 1 章讲的：上下文、工具描述、错误信息都由 harness 决定。</li>
-      </ul>
-      <div class="follow"><b>再深一步：</b>做第三方 harness 怎么办？→ 按模型选工具格式（第 7 章），用同一套评测比较（第 15 章）。</div>
-    </div></details>
-    <details class="qa"><summary>RLHF、RLVR、PPO、GRPO 是什么关系？</summary><div class="ans">
-      <ul>
-        <li>两个独立的维度。反馈从哪来：人（RLHF）、模型（RLAIF）、程序（RLVR）。怎么更新：PPO、GRPO。</li>
-        <li>可以任意组合，比如 DeepSeek-R1-Zero 是“程序判对错 + GRPO”。</li>
-      </ul>
-    </div></details>
-    <details class="qa"><summary>哪些 harness 功能最可能被练进模型？怎么判断？</summary><div class="ans">
-      <ul>
-        <li>看它能不能写成示范或被程序判对错：输出格式、推理和工具交织、规划习惯、防偷懒的提醒，都更可能被练进模型。但“更可能”不是“已经”：要不要删，看你的模型在你的任务上的评测。</li>
-        <li>沙箱、权限、状态、审计、成本，是环境而不是行为，练不进去。</li>
-        <li>落到实践：换模型时关掉一个脚手架跑评测（消融），成绩不降就删。</li>
-      </ul>
-    </div></details>
-  </div>
-  <label class="understood"><input type="checkbox" data-done="c2"> 我能讲清模型怎么被训练成会用工具，以及这和 harness 的关系</label>
+<div class="eyebrow">第 2 章 <span class="imp must">核心</span></div>
+<h2>模型从哪来：能力是怎么训练出来的</h2>
+<p class="lead">手册里反复出现“被训练进模型”“模型和 harness 一起训练”。这一章讲清它们的机制。不讲 Transformer 内部，只讲和 agent 有关的部分：模型的硬约束从哪来，会用工具的本事从哪来。第一次读只看两节“基础”即可，其余小节可以等读完第 3、4 章的闭环再回来。</p>
+<h3><span class="lv l1">基础</span>预训练只学一件事：猜下一个 token</h3>
+<div class="prose">
+<p>预训练拿海量文本，遮住下一个 token 让模型猜，按它给正确答案的概率打分（交叉熵损失）、成批地调参数，在万亿级 token 上反复做。文本自带答案，不需要人标注。</p>
+<p>agent 面对的几条硬约束，常被笼统地说成“因为模型只会猜下一个 token”。其实它们来源不同：有的来自训练目标，有的来自模型架构，有的来自推理接口和部署预算。下表说的是本书讨论的主流模型，即自回归（decoder-only）Transformer、通过无状态 API 调用的那一类：</p>
+</div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>约束</th>
+<th>主要来源</th>
+<th>后面用到</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>无状态：记忆只能靠每次重发历史</td>
+<td><b>推理接口。</b>推理时权重不更新，常见 API 也不在两次请求之间保留模型内部状态。这不是“猜下一个 token”本身决定的：厂商可以在服务端代存历史（第 3 章的 Responses API），研究里也有 Transformer-XL 这类跨片段保留状态的架构</td>
+<td>第 3、10 章</td>
+</tr>
+<tr>
+<td>上下文窗口有限，越长越难用好</td>
+<td><b>架构与预算。</b>注意力计算和 KV 缓存随长度增长，位置编码和训练时见过的长度有限，部署时还有显存和成本预算</td>
+<td>第 5 章</td>
+</tr>
+<tr>
+<td>相同前缀算出的中间结果（KV）可以复用</td>
+<td><b>架构。</b>因果注意力只回看前面的 token，前面的计算不受后文影响</td>
+<td>第 6 章</td>
+</tr>
+<tr>
+<td>会自信地出错，需要外部验证</td>
+<td><b>训练目标。</b>预训练学的是“像训练数据”，后训练学的是“像示范”或“拿高分”，都不直接等于“正确”</td>
+<td>第 15 章</td>
+</tr>
+<tr>
+<td>无法可靠区分哪段文字该执行，哪段只是材料</td>
+<td><b>输入表示。</b>指令和材料拼在同一个 token 序列里，没有硬隔离的通道；后训练能降低被带偏的概率，但不能杜绝</td>
+<td>第 13 章</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>分清来源，才能判断哪条约束会松动、怎么松动。服务端状态改变的是“谁来保存历史”，模型每次仍要从输入重新读起；更长的窗口放宽了上限，却没有消除越长越不准。</p>
+<p>预训练出来的模型只会续写。问它“香港天气怎么样？用摄氏度”，它很可能续写出更多关于天气的问题，而不是输出一个天气查询的调用。让它听指令、会用工具，靠后训练。</p>
+</div>
+<h3><span class="lv l1">基础</span>后训练的两种方法</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>怎么学</th>
+<th>例子</th>
+<th>适合</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SFT（监督微调）</td>
+<td>照着示范学：给“请求 → 正确回复”的样例，仍用猜下一个 token 的目标训练</td>
+<td>“查香港天气，用摄氏度” → <code>{&quot;name&quot;:&quot;get_weather&quot;,&quot;arguments&quot;:{&quot;city&quot;:&quot;Hong Kong&quot;,&quot;unit&quot;:&quot;celsius&quot;}}</code></td>
+<td>写得出标准答案的行为：输出格式、工具调用、回答风格</td>
+</tr>
+<tr>
+<td>强化学习（RL）</td>
+<td>自己试、按分数学：同一题生成几个答案，打分，提高高分答案的概率</td>
+<td>写 <code>is_even(n)</code>，跑测试，通过率就是分数</td>
+<td>写不出唯一示范、但判得出好坏的任务：代码、数学、多步工具任务</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="analogy"><div class="tag">Java 类比</div><p>SFT 像照着评审意见逐行改代码；RL 像只给你 CI 的红绿结果，自己摸索怎么让它变绿。后者不需要有人写出标准答案，只需要有一个靠得住的检查。</p>
+</div>
+<h3><span class="lv l2">进阶</span>缩写很多，其实只有两个维度</h3>
+<div class="prose">
+<p>后训练的论文里缩写很多：RLHF、RLAIF、RLVR、PPO、GRPO……它们分属两个互不相干的维度：</p>
+</div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>选项</th>
+<th>回答的问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>反馈从哪来</td>
+<td>人来比较两个回答（RLHF）· 模型按评分标准打分（RLAIF）· 程序判对错：测试、答案核对、任务的最终状态（RLVR）</td>
+<td>谁说这个答案好</td>
+</tr>
+<tr>
+<td>怎么更新参数</td>
+<td>PPO：和“预期得分”比，并限制每一步改动的幅度 · GRPO：同一题的几个答案互相比，高于组内平均的加强</td>
+<td>拿到分数之后怎么改模型</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>ChatGPT 最初用的是“人来比较 + PPO”，DeepSeek-R1-Zero 用的是“程序判对错 + GRPO”。两个维度可以任意组合。这是“看本质不看名字”的一个小例子：<b>先找出维度，再把名字放进格子</b>，五个缩写就只剩两个问题。</p>
+</div>
+<details class="term" data-term="rlvr"><summary><b>RLHF → RLVR</b><span class="st hot">正流行</span><span class="one">反馈从“人来比较”扩展到“程序判对错”</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2022-03</time><span>OpenAI 的 InstructGPT：人对回答排序，训练一个奖励模型，再用 PPO 优化。这就是 RLHF，ChatGPT 的基础。</span></li>
+<li><time>2022-12</time><span>Anthropic 的 Constitutional AI：让模型按一份原则给回答打分，替代一部分人工反馈，即 RLAIF。</span></li>
+<li><time>2024-09</time><span>OpenAI o1：用强化学习训练推理。训练时多花算力、回答时多想一会儿，准确率都会提升。</span></li>
+<li><time>2024-11</time><span>AI2 的 Tülu 3 报告把“用可验证的答案当奖励”称为 RLVR。</span></li>
+<li><time>2025-01</time><span>DeepSeek-R1：R1-Zero 不做 SFT，只用规则判定的奖励（答案是否正确 + 输出格式是否合规）加 GRPO，就练出了长推理。正式发布的 R1 是多阶段的：少量示范 SFT、推理 RL、再一轮 SFT、再全面 RL（这一阶段除了规则奖励，也用奖励模型评判通用回答）。</span></li>
+<li><time>2025–26</time><span>奖励扩展到多步 agent 任务：一次尝试就是一整条“读文件、改代码、跑测试”的轨迹，测试结果就是分数。</span></li>
+</ul>
+<p class="rel"><b>和其他词的关系：</b>RLHF / RLAIF / RLVR 说的是反馈从哪来，PPO / GRPO 说的是怎么更新，别混在一起。同一种“程序判对错”的验证器，也用在离线评测（第 15 章）和 agent 运行中的自我检查（第 9 章）。</p>
+</div></details>
+<h3><span class="lv l2">进阶</span>一次尝试，可以是一整条 agent 轨迹</h3>
+<div class="prose">
+<p>在数学题上，一次尝试（rollout）是一段解答。在 coding agent 上，一次尝试是一整条轨迹：读文件、改代码、跑测试……最后用隐藏测试或任务结束时的系统状态打分。</p>
+<p>要跑这种训练，需要一个能真正执行工具的环境，也就是一个 harness。厂商通常用自家的 harness 来跑。这一点能解释后面好几章会遇到的现象：</p>
+<ul>
+<li><b>编辑格式和模型绑定。</b>GPT 系列熟悉 <code>apply_patch</code>，Claude 熟悉 <code>str_replace</code>，因为训练时用的就是它们（第 7 章）。</li>
+<li><b>同一个模型在训练时用惯的那类 harness 里往往表现更好</b>，换一个接口不熟悉的 harness 可能差一截（第 1 章）。是否真的更好，要在同一模型、同一任务下评测。</li>
+<li><b>推理块要原样回传。</b>模型是在“思考、调工具、带着思考继续”的轨迹上练出来的，中途丢掉思考，它就不在熟悉的状态里了（第 3 章）。</li>
+<li><b>基准检查最终状态。</b>Terminal-Bench、SWE-bench 检查任务做完后机器或仓库的状态，和训练用的奖励是同一类东西（第 15 章）。</li>
+</ul>
+</div>
+<div class="callout"><b class="h">关键认知</b><p>harness 不只是部署模型的地方，也是训练模型的地方。模型在什么样的 harness 里练过，就更熟悉什么样的 harness。</p>
+</div>
+<h3><span class="lv l3">深入</span>验证器看不到的地方，模型会钻空子</h3>
+<div class="prose">
+<p>题目：时薪 12 美元，干了 50 分钟，挣多少？假如奖励只核对最后的数字：</p>
+</div>
+<div class="code"><div class="hd"><span>只看答案的奖励</span><span>示意</span></div><pre>解答 A：12 ÷ 60 × 50 = 10    #### 10    → 奖励 1，过程正确
+解答 B：12 + 50 = 10         #### 10    → 奖励 1，过程是错的，答案碰对了</pre></div>
+<div class="prose">
+<p>奖励只看结果，错误的过程也会被加强。训练得足够久，模型会学会利用验证器的盲区（reward hacking），比如让测试通过却没修好问题，甚至去改测试本身。</p>
+<p>这个教训贯穿三个地方：训练时的奖励、评测时的判分（第 15 章）、agent 运行时的自我检查（第 9 章）。它们本质上是同一个验证器用在不同时间点。验证器写得越全，三处都越可靠。</p>
+</div>
+<h3><span class="lv l3">深入</span>什么会被训练进模型</h3>
+<div class="prose">
+<p>把上面合起来，就得到<a href="index.html#learn">首页</a>的那条经验规律：<b>能写成示范的（SFT）、能用程序判对错的（RLVR），更有机会被训练进模型。</b>这是倾向，不是定律：能判对错不代表模型容易试出对的答案，奖励可能有漏洞（见上一节），学会示范也不代表能可靠泛化，练不练还要看数据和成本。已经发生的例子：</p>
+<ul>
+<li>ReAct 的 Thought/Action 文本模板 → 主流推理模型把“想、做、看”练进了权重，显式模板不再是必需（第 4 章）。</li>
+<li>强制更新待办清单、防止“谎称完成”的提醒 → Claude Code 团队报告，在他们的新模型上某个这类机制已经不需要（第 9 章）。这是一家在自家模型上的观察；换了模型或任务，是否还需要，要用评测确认。</li>
+<li>多 agent 的协调：Kimi K2.5 用强化学习只训练协调者、子 agent 保持不动，让模型自己决定什么时候拆分、派给谁。分工这件事也开始被训练进去。</li>
+</ul>
+<p>练不进模型的是沙箱、权限、状态持久化、审计、成本控制。它们不是模型的“行为”，而是环境；验证环境本身还是奖励的来源。</p>
+</div>
+<div class="analogy"><div class="tag">Java 类比</div><p>像 JVM 的 JIT：反复执行、可度量的热点代码会被编译成机器码，你手写的那层微优化就多余了；但 GC、类加载、安全检查这些运行时职责，不会因为 JIT 变强而消失。</p>
+</div>
+<div class="ahead"><b class="h">前瞻 · 本章</b><ul>
+<li><span class="cf sure">已有证据</span>公开的后训练报告（Tülu 3、DeepSeek-R1 等）把可验证奖励作为代码、数学这类任务的主要训练信号之一。验证器的质量直接影响模型在这些任务上能练到多好。</li>
+<li><span class="cf likely">作者判断</span>训练环境越来越像真实的 harness：真实仓库、真实终端、长任务。更多 harness 里的行为会被练进模型，第三方 harness 要跟着模型调整工具格式。</li>
+<li><span class="cf likely">作者判断</span>“能不能写出验证器”会成为判断一个领域 agent 进步快慢的先行指标：有测试的领域（代码）进步最快，难以判对错的领域（写作、设计）慢得多。</li>
+<li><span class="cf open">有争议</span>多 agent 的协调能被训练到什么程度。公开的对比还很少，各家比较时的预算条件也不同。</li>
+</ul>
+</div>
+<div class="qa-wrap">
+<div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
+<details class="qa"><summary>为什么同一个模型换一个 harness，表现会差很多？</summary><div class="ans">
+<ul>
+<li>后训练用 harness 跑 rollout，工具格式、编辑格式、推理块的回传方式，都是模型在训练时见惯了的。</li>
+<li>换一个 harness，等于换了一套它不熟悉的接口。</li>
+<li>再加上第 1 章讲的：上下文、工具描述、错误信息都由 harness 决定。</li>
+</ul>
+<div class="follow"><b>再深一步：</b>做第三方 harness 怎么办？→ 按模型选工具格式（第 7 章），用同一套评测比较（第 15 章）。</div>
+</div></details>
+<details class="qa"><summary>RLHF、RLVR、PPO、GRPO 是什么关系？</summary><div class="ans">
+<ul>
+<li>两个独立的维度。反馈从哪来：人（RLHF）、模型（RLAIF）、程序（RLVR）。怎么更新：PPO、GRPO。</li>
+<li>可以任意组合，比如 DeepSeek-R1-Zero 是“程序判对错 + GRPO”。</li>
+</ul>
+</div></details>
+<details class="qa"><summary>哪些 harness 功能最可能被练进模型？怎么判断？</summary><div class="ans">
+<ul>
+<li>看它能不能写成示范或被程序判对错：输出格式、推理和工具交织、规划习惯、防偷懒的提醒，都更可能被练进模型。但“更可能”不是“已经”：要不要删，看你的模型在你的任务上的评测。</li>
+<li>沙箱、权限、状态、审计、成本，是环境而不是行为，练不进去。</li>
+<li>落到实践：换模型时关掉一个脚手架跑评测（消融），成绩不降就删。</li>
+</ul>
+</div></details>
+</div>
+<div class="selftest" data-quiz>
+<div class="qa-head"><span>自测</span><span class="score">2 题</span></div>
+<div>
+<div class="q" data-a="1"><div class="qt">1. RLVR 和 GRPO 是什么关系？</div><div class="opts"><button class="opt">GRPO 是 RLVR 的新名字</button><button class="opt">RLVR 说反馈从哪来（程序判对错），GRPO 说怎么更新参数，可以组合</button><button class="opt">二者是竞争方案，只能选一个</button></div><div class="why" hidden><span class="verdict"></span>两个独立维度。DeepSeek-R1-Zero 就是“程序判对错 + GRPO”。</div></div>
+<div class="q" data-a="2"><div class="qt">2. 按本手册的规律，哪一项最不可能被训练进模型？</div><div class="opts"><button class="opt">按某种编辑格式输出修改</button><button class="opt">调用工具前先想一想</button><button class="opt">在沙箱里限制网络访问</button></div><div class="why" hidden><span class="verdict"></span>沙箱是环境，不是模型的行为。能示范、能被程序判对错的行为才更有机会被练进模型；即使如此，某段脚手架能不能删，仍要用评测确认。</div></div>
+</div>
+</div>
+<label class="understood"><input type="checkbox" data-done="c2"> 我能讲清模型怎么被训练成会用工具，以及这和 harness 的关系</label>
 </section>
 
-<!-- 3 -->
 <section class="ch" id="c3" data-t="LLM 调用与工具调用" data-part="原理" data-imp="must">
-  <div class="eyebrow">第 3 章 <span class="imp must">核心</span></div>
-  <h2>LLM API 与 Function Calling</h2>
-
-  <h3><span class="lv l1">基础</span>一次带工具调用的往返</h3>
-  <div class="code"><div class="hd"><span>通用形态（已简化，字段名取自 pi-ai）</span><span>示意</span></div><pre><span class="c">// → 请求：system + 工具定义 + 历史</span>
+<div class="eyebrow">第 3 章 <span class="imp must">核心</span></div>
+<h2>LLM API 与 Function Calling</h2>
+<h3><span class="lv l1">基础</span>一次带工具调用的往返</h3>
+<div class="code"><div class="hd"><span>通用形态（已简化，字段名取自 pi-ai）</span><span>示意</span></div><pre><span class="c">// → 请求：system + 工具定义 + 历史</span>
 { <span class="s">"systemPrompt"</span>: <span class="s">"You are an expert coding assistant…"</span>,
   <span class="s">"tools"</span>: [{ <span class="s">"name"</span>: <span class="s">"read"</span>, <span class="s">"description"</span>: <span class="s">"Read file contents"</span>,
               <span class="s">"parameters"</span>: { <span class="s">"type"</span>: <span class="s">"object"</span>, <span class="s">"properties"</span>: { <span class="s">"path"</span>: { <span class="s">"type"</span>: <span class="s">"string"</span> } }, <span class="s">"required"</span>: [<span class="s">"path"</span>] } }],
@@ -342,165 +453,202 @@
 <span class="c">// → 下一次请求：全部历史 + 工具结果</span>
 { <span class="s">"role"</span>: <span class="s">"toolResult"</span>, <span class="s">"toolCallId"</span>: <span class="s">"call_1"</span>, <span class="s">"toolName"</span>: <span class="s">"read"</span>,
   <span class="s">"content"</span>: [{ <span class="s">"type"</span>: <span class="s">"text"</span>, <span class="s">"text"</span>: <span class="s">"&lt;project&gt;…&lt;/project&gt;"</span> }], <span class="s">"isError"</span>: <span class="k">false</span> }</pre></div>
-  <div class="prose">
-  <ul>
-    <li><b>模型不执行任何东西。</b>它按训练学到的格式输出工具名和 JSON 参数，执行的是 harness。</li>
-    <li><b>无状态。</b>每次请求都把完整历史重发，“记忆”是 harness 拼出来的。</li>
-    <li><b>模型靠名字和描述选工具。</b>描述写得不清，就会选错或填错参数。</li>
-  </ul>
-  </div>
-  <details class="term" data-term="fc"><summary><b>Function calling / Tool use</b><span class="st infra">已成标配</span><span class="one">不是没人讨论了，是变成了多数工具协议的底层形态</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2023-06</time><span>OpenAI 在 GPT-4 / 3.5 上推出 function calling，模型第一次被专门训练输出“工具名 + JSON 参数”。</span></li>
-      <li><time>2024-05</time><span>Anthropic tool use 正式可用；各家格式大同小异，都是 JSON Schema 描述工具。</span></li>
-      <li><time>2024-08</time><span>OpenAI 推出 Structured Outputs（严格按 schema 约束解码），其他厂商陆续跟进。</span></li>
-      <li><time>2025</time><span>推理模型把思考和工具调用交织在一起（先想、调工具、看结果、再想），工具调用从“一问一答”变成连续动作。</span></li>
-    </ul>
-    <p class="rel"><b>和新词的关系：</b>MCP、tool search、code mode 大多建立在它之上：MCP 决定工具从哪来，tool search 决定什么时候把定义给模型，code mode 让模型用代码批量调用，落到模型面前的通常仍是一次工具调用（第 16 章）。<b>但 JSON 只是最常见的表达，不是唯一的：</b>OpenAI 的 custom tools 允许工具接收自由文本，并可以用语法（Lark、正则）约束格式，适合补丁、SQL 这类本来就不是 JSON 的输入（<a href="https://developers.openai.com/api/docs/guides/function-calling" target="_blank" rel="noopener">官方文档</a>）。更稳的抽象是一个闭环：<b>模型提出动作请求，运行时校验并执行，再把结果回传</b>；用 JSON、自由文本还是代码来表达请求，是可以变的那一层。</p>
-  </div></details>
-
-  <h3><span class="lv l2">进阶</span>stop reason、流式与错误</h3>
-  <div class="tbl"><table>
-    <thead><tr><th>stopReason</th><th>含义</th><th>harness 该做什么</th></tr></thead>
-    <tbody>
-      <tr><td><code>stop</code></td><td>模型说完了</td><td>结束本次运行</td></tr>
-      <tr><td><code>toolUse</code></td><td>要调用工具</td><td>执行工具，回填结果，继续循环</td></tr>
-      <tr><td><code>length</code></td><td>达到最大输出 token</td><td>工具参数可能被截断，<b>不能执行</b></td></tr>
-      <tr><td><code>error</code></td><td>请求出错</td><td>按错误类型重试或结束（第 14 章）</td></tr>
-      <tr><td><code>aborted</code></td><td>被取消</td><td>保留已收到的部分，结束</td></tr>
-      <tr><td><code>pending</code></td><td>仅出现在流式的中间状态</td><td>等待</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose">
-  <ul>
-    <li><b>流式事件：</b>响应以 SSE 逐块到达，统一成 <code>text_delta</code>、<code>thinking_delta</code>、<code>toolcall_delta</code>、<code>toolcall_end</code> 等事件。</li>
-    <li><b>流式中的工具参数是半截 JSON。</b>界面想提前显示“正在写入 X 文件”，就要做“尽力而为”的增量解析；真正执行必须等 <code>toolcall_end</code> 拿到完整参数，并经过 schema 校验。</li>
-    <li><b>参数不合法</b>（缺字段、类型错、调了不存在的工具）时，不要抛异常中断任务，把错误作为 <code>isError</code> 的工具结果返回，模型通常下一轮就能改对。</li>
-    <li><b>推理块要原样回传。</b>推理模型在调用工具前会先输出思考内容（Anthropic 是带签名的 thinking 块，OpenAI 是可加密的 reasoning item）。在工具调用的往返中，harness 必须把这些块原样放回下一次请求，否则模型会丢掉推理过程，有的厂商会直接拒绝请求。这也是“跨厂商切换”难的根源（见下）。</li>
-    <li><b>思考预算是一个参数。</b>现在的模型大多可以调思考强度（effort / thinking budget）。harness 可以按任务难度设置：简单的格式化用低档，排查疑难问题用高档。它影响成本、延迟，有时还影响缓存键（第 6 章）。</li>
-  </ul>
-  </div>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">错误是值不是异常；流式的半截参数只用来展示；被截断的工具调用整批判为失败。</span><span class="pf">packages/ai/README.md · Error Handling / Streaming Tool Calls</span></summary><div class="pb">
-    <ul>
-      <li><b>错误是值，不是异常。</b>流一旦建立就不会 throw：出错时发出 <code>error</code> 事件，最终消息的 <code>stopReason</code> 为 <code>"error"</code> 或 <code>"aborted"</code>，并保留已收到的部分内容和 token 用量。上层只需看 stopReason 分支，不需要到处 try/catch。</li>
-      <li><b>半截参数：</b><code>toolcall_delta</code> 期间 <code>arguments</code> 是对不完整 JSON 的尽力解析，至少是 <code>{}</code>；文档特别提醒字段可能缺失、字符串可能截断在半个词。</li>
-      <li><b>截断的调用不执行：</b>agent-loop 遇到 <code>stopReason === "length"</code> 会调用 <code>failToolCallsFromTruncatedMessage</code>，把这条消息里的工具调用全部判为失败。</li>
-    </ul>
-  </div></details>
-
-  <h3><span class="lv l3">深入</span>约束解码与跨厂商切换</h3>
-  <div class="prose">
-  <ul>
-    <li><b>约束解码（constrained sampling）：</b>部分厂商支持在解码时强制输出符合 JSON Schema，参数就不会不合法。代价是不是所有模型都支持，schema 也有限制（例如要求 <code>additionalProperties: false</code>）。</li>
-    <li><b>跨厂商切换：</b>同一个会话中途换模型（比如主模型故障降级），历史消息要能被另一家理解。难点在各家私有的内容块，比如推理过程（thinking）。</li>
-  </ul>
-  </div>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">能用严格模式就用，不支持就退回普通调用；换厂商时把对方的 thinking 块转成普通文本。</span><span class="pf">packages/ai · Constrained Sampling / Cross-Provider Handoffs</span></summary><div class="pb">
-    <div class="code"><div class="hd"><span>工具声明约束解码</span><span>ai/README.md</span></div><pre><span class="k">const</span> strictTool: Tool = {
+<div class="prose">
+<ul>
+<li><b>模型不执行任何东西。</b>它按训练学到的格式输出工具名和 JSON 参数，执行的是 harness。</li>
+<li><b>无状态。</b>每次请求都把完整历史重发，“记忆”是 harness 拼出来的。</li>
+<li><b>模型靠名字和描述选工具。</b>描述写得不清，就会选错或填错参数。</li>
+</ul>
+</div>
+<details class="term" data-term="fc"><summary><b>Function calling</b><span class="st infra">已成标配</span><span class="one">不是没人讨论了，是变成了多数工具协议的底层形态</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2023-06</time><span>OpenAI 在 GPT-4 / 3.5 上推出 function calling，模型第一次被专门训练输出“工具名 + JSON 参数”。</span></li>
+<li><time>2024-05</time><span>Anthropic tool use 正式可用；各家格式大同小异，都是 JSON Schema 描述工具。</span></li>
+<li><time>2024-08</time><span>OpenAI 推出 Structured Outputs（严格按 schema 约束解码），其他厂商陆续跟进。</span></li>
+<li><time>2025</time><span>推理模型把思考和工具调用交织在一起（先想、调工具、看结果、再想），工具调用从“一问一答”变成连续动作。</span></li>
+</ul>
+<p class="rel"><b>和新词的关系：</b>MCP、tool search、code mode 大多建立在它之上：MCP 决定工具从哪来，tool search 决定什么时候把定义给模型，code mode 让模型用代码批量调用，落到模型面前的通常仍是一次工具调用（第 16 章）。<b>但 JSON 只是最常见的表达，不是唯一的：</b>OpenAI 的 custom tools 允许工具接收自由文本，并可以用语法（Lark、正则）约束格式，适合补丁、SQL 这类本来就不是 JSON 的输入（<a href="https://developers.openai.com/api/docs/guides/function-calling" target="_blank" rel="noopener">官方文档</a>）。更稳的抽象是一个闭环：<b>模型提出动作请求，运行时校验并执行，再把结果回传</b>；用 JSON、自由文本还是代码来表达请求，是可以变的那一层。</p>
+</div></details>
+<h3><span class="lv l2">进阶</span>stop reason、流式与错误</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>stopReason</th>
+<th>含义</th>
+<th>harness 该做什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stop</code></td>
+<td>模型说完了</td>
+<td>结束本次运行</td>
+</tr>
+<tr>
+<td><code>toolUse</code></td>
+<td>要调用工具</td>
+<td>执行工具，回填结果，继续循环</td>
+</tr>
+<tr>
+<td><code>length</code></td>
+<td>达到最大输出 token</td>
+<td>工具参数可能被截断，<b>不能执行</b></td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>请求出错</td>
+<td>按错误类型重试或结束（第 14 章）</td>
+</tr>
+<tr>
+<td><code>aborted</code></td>
+<td>被取消</td>
+<td>保留已收到的部分，结束</td>
+</tr>
+<tr>
+<td><code>pending</code></td>
+<td>仅出现在流式的中间状态</td>
+<td>等待</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<ul>
+<li><b>流式事件：</b>响应以 SSE 逐块到达，统一成 <code>text_delta</code>、<code>thinking_delta</code>、<code>toolcall_delta</code>、<code>toolcall_end</code> 等事件。</li>
+<li><b>流式中的工具参数是半截 JSON。</b>界面想提前显示“正在写入 X 文件”，就要做“尽力而为”的增量解析；真正执行必须等 <code>toolcall_end</code> 拿到完整参数，并经过 schema 校验。</li>
+<li><b>参数不合法</b>（缺字段、类型错、调了不存在的工具）时，不要抛异常中断任务，把错误作为 <code>isError</code> 的工具结果返回，模型通常下一轮就能改对。</li>
+<li><b>推理块要原样回传。</b>推理模型在调用工具前会先输出思考内容（Anthropic 是带签名的 thinking 块，OpenAI 是可加密的 reasoning item）。在工具调用的往返中，harness 必须把这些块原样放回下一次请求，否则模型会丢掉推理过程，有的厂商会直接拒绝请求。这也是“跨厂商切换”难的根源（见下）。</li>
+<li><b>思考预算是一个参数。</b>现在的模型大多可以调思考强度（effort / thinking budget）。harness 可以按任务难度设置：简单的格式化用低档，排查疑难问题用高档。它影响成本、延迟，有时还影响缓存键（第 6 章）。</li>
+</ul>
+</div>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">错误是值不是异常；流式的半截参数只用来展示；被截断的工具调用整批判为失败。</span><span class="pf">packages/ai/README.md · Error Handling / Streaming Tool Calls</span></summary><div class="pb">
+<ul>
+<li><b>错误是值，不是异常。</b>流一旦建立就不会 throw：出错时发出 <code>error</code> 事件，最终消息的 <code>stopReason</code> 为 <code>&quot;error&quot;</code> 或 <code>&quot;aborted&quot;</code>，并保留已收到的部分内容和 token 用量。上层只需看 stopReason 分支，不需要到处 try/catch。</li>
+<li><b>半截参数：</b><code>toolcall_delta</code> 期间 <code>arguments</code> 是对不完整 JSON 的尽力解析，至少是 <code>{}</code>；文档特别提醒字段可能缺失、字符串可能截断在半个词。</li>
+<li><b>截断的调用不执行：</b>agent-loop 遇到 <code>stopReason === &quot;length&quot;</code> 会调用 <code>failToolCallsFromTruncatedMessage</code>，把这条消息里的工具调用全部判为失败。</li>
+</ul>
+</div></details>
+<h3><span class="lv l3">深入</span>约束解码与跨厂商切换</h3>
+<div class="prose">
+<ul>
+<li><b>约束解码（constrained sampling）：</b>部分厂商支持在解码时强制输出符合 JSON Schema，参数就不会不合法。代价是不是所有模型都支持，schema 也有限制（例如要求 <code>additionalProperties: false</code>）。</li>
+<li><b>跨厂商切换：</b>同一个会话中途换模型（比如主模型故障降级），历史消息要能被另一家理解。难点在各家私有的内容块，比如推理过程（thinking）。</li>
+</ul>
+</div>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">能用严格模式就用，不支持就退回普通调用；换厂商时把对方的 thinking 块转成普通文本。</span><span class="pf">packages/ai · Constrained Sampling / Cross-Provider Handoffs</span></summary><div class="pb">
+<div class="code"><div class="hd"><span>工具声明约束解码</span><span>ai/README.md</span></div><pre><span class="k">const</span> strictTool: Tool = {
   name: <span class="s">'edit_file'</span>,
   description: <span class="s">'Edit a file'</span>,
   parameters: Type.Object({ path: Type.String(), content: Type.String() }, { additionalProperties: <span class="k">false</span> }),
-  constrainedSampling: { type: <span class="s">'json_schema'</span>, strict: <span class="s">'prefer'</span> }   <span class="c">// 'require' 时不支持的模型直接报错</span>
+  constrainedSampling: { <span class="k">type</span>: <span class="s">'json_schema'</span>, strict: <span class="s">'prefer'</span> }   <span class="c">// 'require' 时不支持的模型直接报错</span>
 };</pre></div>
-    <ul>
-      <li><code>strict: 'prefer'</code>：支持就用厂商的严格模式，不支持就退回普通工具调用。这是“能力探测 + 优雅降级”的典型写法。pi 内置的 read / bash / edit / write 都声明了 <code>strict: "prefer"</code>。</li>
-      <li>跨厂商时：同一厂商的 assistant 消息原样保留；来自其他厂商的消息，其 thinking 块会被转成带 <code>&lt;thinking&gt;</code> 标签的普通文本，工具调用和文本保持不变。</li>
-    </ul>
-  </div></details>
-  <div class="prose">
-  <p><b>无状态 API 还是有状态 API。</b>上面讲的都是无状态调用：每次把完整历史发过去。厂商也提供了有状态的选择，比如 OpenAI 的 Responses API 可以只传 <code>previous_response_id</code>，历史存在服务端；还可以直接用服务端工具（网页搜索、代码执行），工具在厂商那边执行完再把结果交给模型。这等于把一部分 harness 搬到了厂商那里。</p>
-  <ul>
-    <li><b>好处：</b>少传数据、少写代码，服务端工具开箱即用。</li>
-    <li><b>代价：</b>状态在别人手里，换厂商、审计、离线回放、合规都变难。coding agent 这类需要分支、恢复、跨厂商降级的场景，主流做法仍是客户端保存全部状态。pi 也是这样。</li>
-  </ul>
-  </div>
-  <details class="term" data-term="assistants"><summary><b>Assistants API</b><span class="st gone">已淘汰</span><span class="one">“托管 agent”的第一次尝试，2026 年 8 月停用，被 Responses API 取代</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2023-11</time><span>OpenAI 推出 Assistants API：thread、run、内置检索和代码解释器，状态全托管。</span></li>
-      <li><time>2025-03</time><span>推出 Responses API：保留服务端工具和可选的服务端状态，但调用模型回到简单的“一次请求一次响应”。</span></li>
-      <li><time>2025-08</time><span>宣布 Assistants API 弃用，一年后（2026-08）停止服务。</span></li>
-    </ul>
-    <p class="rel"><b>教训：</b>把循环、状态、检索全包进黑盒的抽象太重了，开发者需要能控制每一轮。后来的主流形态是“底层给原语，控制权交还开发者”：Responses API 的服务端工具仍可在一次请求里连续执行，但调用自己的函数时，每一轮由客户端驱动。这和第 1 章的 workflow / agent 之争、和 2023 年 LangChain 的降温是同一类教训。</p>
-  </div></details>
-
-  <div class="qa-wrap">
-    <div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
-    <details class="qa"><summary>Function Calling 的原理是什么？</summary><div class="ans">
-      <ul>
-        <li>模型经过训练，能按特定格式输出工具名和参数；工具 schema 由 API 服务端注入到提示中。</li>
-        <li>harness 解析输出、校验参数、执行、把结果作为 toolResult 回填，再发起下一次请求。</li>
-        <li>本质是“模型提出请求、程序执行、结果回填”的协议，模型没有执行能力。</li>
-      </ul>
-      <div class="follow"><b>再深一步：</b>怎么保证参数一定合法？→ 约束解码 + harness 侧 schema 校验双保险；约束解码不可用时，靠校验失败后的错误回填让模型自纠。</div>
-    </div></details>
-    <details class="qa"><summary>流式输出时，工具参数还没收完，界面想先展示怎么办？</summary><div class="ans">
-      <ul>
-        <li>对不完整 JSON 做容错的增量解析，只用于展示，字段要逐个判空。</li>
-        <li>执行前必须等完整参数并重新校验，绝不能拿半截参数执行。</li>
-        <li>如果最终 stopReason 是 length，整批调用作废。</li>
-      </ul>
-    </div></details>
-  </div>
-  <div class="ahead"><b class="h">前瞻 · 本章</b><ul>
-    <li><span class="cf sure">已有证据</span>“JSON Schema 描述参数 + 模型输出结构化调用”是目前各家 API 最常见的形态；同时也出现了自由文本加语法约束的工具，JSON 不是唯一表达。</li>
-    <li><span class="cf sure">已有证据</span>主流推理模型把推理和工具调用交织在一起，厂商文档要求 harness 原样保存和回传推理块。</li>
-    <li><span class="cf likely">作者判断</span>“模型提出动作请求 → 运行时校验、执行、回传”这个闭环会长期稳定；请求的表达形式（JSON、受语法约束的文本、代码）和上层的发现、批量调用方式还会继续变。</li>
-    <li><span class="cf likely">作者判断</span>厂商会提供更多服务端工具和托管能力。harness 要做的选择是：哪些交给厂商省事，哪些必须握在自己手里（状态、权限、审计）。</li>
-  </ul></div>
-  <label class="understood"><input type="checkbox" data-done="c3"> 我能讲清工具调用的往返、stop reason 和异常处理</label>
+<ul>
+<li><code>strict: 'prefer'</code>：支持就用厂商的严格模式，不支持就退回普通工具调用。这是“能力探测 + 优雅降级”的典型写法。pi 内置的 read / bash / edit / write 都声明了 <code>strict: &quot;prefer&quot;</code>。</li>
+<li>跨厂商时：同一厂商的 assistant 消息原样保留；来自其他厂商的消息，其 thinking 块会被转成带 <code>&lt;thinking&gt;</code> 标签的普通文本，工具调用和文本保持不变。</li>
+</ul>
+</div></details>
+<div class="prose">
+<p><b>无状态 API 还是有状态 API。</b>上面讲的都是无状态调用：每次把完整历史发过去。厂商也提供了有状态的选择，比如 OpenAI 的 Responses API 可以只传 <code>previous_response_id</code>，历史存在服务端；还可以直接用服务端工具（网页搜索、代码执行），工具在厂商那边执行完再把结果交给模型。这等于把一部分 harness 搬到了厂商那里。</p>
+<ul>
+<li><b>好处：</b>少传数据、少写代码，服务端工具开箱即用。</li>
+<li><b>代价：</b>状态在别人手里，换厂商、审计、离线回放、合规都变难。coding agent 这类需要分支、恢复、跨厂商降级的场景，主流做法仍是客户端保存全部状态。pi 也是这样。</li>
+</ul>
+</div>
+<details class="term" data-term="assistants"><summary><b>Assistants API</b><span class="st gone">已淘汰</span><span class="one">“托管 agent”的第一次尝试，2026 年 8 月停用，被 Responses API 取代</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2023-11</time><span>OpenAI 推出 Assistants API：thread、run、内置检索和代码解释器，状态全托管。</span></li>
+<li><time>2025-03</time><span>推出 Responses API：保留服务端工具和可选的服务端状态，但调用模型回到简单的“一次请求一次响应”。</span></li>
+<li><time>2025-08</time><span>宣布 Assistants API 弃用，一年后（2026-08）停止服务。</span></li>
+</ul>
+<p class="rel"><b>教训：</b>把循环、状态、检索全包进黑盒的抽象太重了，开发者需要能控制每一轮。后来的主流形态是“底层给原语，控制权交还开发者”：Responses API 的服务端工具仍可在一次请求里连续执行，但调用自己的函数时，每一轮由客户端驱动。这和第 1 章的 workflow / agent 之争、和 2023 年 LangChain 的降温是同一类教训。</p>
+</div></details>
+<div class="qa-wrap">
+<div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
+<details class="qa"><summary>Function Calling 的原理是什么？</summary><div class="ans">
+<ul>
+<li>模型经过训练，能按特定格式输出工具名和参数；工具 schema 由 API 服务端注入到提示中。</li>
+<li>harness 解析输出、校验参数、执行、把结果作为 toolResult 回填，再发起下一次请求。</li>
+<li>本质是“模型提出请求、程序执行、结果回填”的协议，模型没有执行能力。</li>
+</ul>
+<div class="follow"><b>再深一步：</b>怎么保证参数一定合法？→ 约束解码 + harness 侧 schema 校验双保险；约束解码不可用时，靠校验失败后的错误回填让模型自纠。</div>
+</div></details>
+<details class="qa"><summary>流式输出时，工具参数还没收完，界面想先展示怎么办？</summary><div class="ans">
+<ul>
+<li>对不完整 JSON 做容错的增量解析，只用于展示，字段要逐个判空。</li>
+<li>执行前必须等完整参数并重新校验，绝不能拿半截参数执行。</li>
+<li>如果最终 stopReason 是 length，整批调用作废。</li>
+</ul>
+</div></details>
+</div>
+<div class="ahead"><b class="h">前瞻 · 本章</b><ul>
+<li><span class="cf sure">已有证据</span>“JSON Schema 描述参数 + 模型输出结构化调用”是目前各家 API 最常见的形态；同时也出现了自由文本加语法约束的工具，JSON 不是唯一表达。</li>
+<li><span class="cf sure">已有证据</span>主流推理模型把推理和工具调用交织在一起，厂商文档要求 harness 原样保存和回传推理块。</li>
+<li><span class="cf likely">作者判断</span>“模型提出动作请求 → 运行时校验、执行、回传”这个闭环会长期稳定；请求的表达形式（JSON、受语法约束的文本、代码）和上层的发现、批量调用方式还会继续变。</li>
+<li><span class="cf likely">作者判断</span>厂商会提供更多服务端工具和托管能力。harness 要做的选择是：哪些交给厂商省事，哪些必须握在自己手里（状态、权限、审计）。</li>
+</ul>
+</div>
+<div class="selftest" data-quiz>
+<div class="qa-head"><span>自测</span><span class="score">3 题</span></div>
+<div>
+<div class="q" data-a="1"><div class="qt">1. 推理模型在工具调用往返中输出的思考块，harness 应该怎么处理？</div><div class="opts"><button class="opt">丢掉，省 token</button><button class="opt">原样放回下一次请求</button><button class="opt">改写成摘要再放回</button></div><div class="why" hidden><span class="verdict"></span>模型是在带着思考继续的轨迹上训练的；丢掉会丢推理过程，有的厂商会直接拒绝请求。</div></div>
+<div class="q" data-a="2"><div class="qt">2. 模型回复因 max tokens 被截断，里面有工具调用。正确做法？</div><div class="opts"><button class="opt">照常执行</button><button class="opt">补全 JSON 后执行</button><button class="opt">不执行，返回错误</button></div><div class="why" hidden><span class="verdict"></span>参数可能不完整。pi 用 failToolCallsFromTruncatedMessage 把整批判为失败。</div></div>
+<div class="q" data-a="1"><div class="qt">3. 下面哪个说法最准确？</div><div class="opts"><button class="opt">工具调用只能用 JSON Schema 描述参数</button><button class="opt">JSON 参数最常见，但也有自由文本加语法约束的工具；不变的是“请求 → 运行时校验执行 → 回传结果”的闭环</button><button class="opt">模型自己执行工具</button></div><div class="why" hidden><span class="verdict"></span>OpenAI 的 custom tools 就允许自由文本输入，并可用 Lark 语法或正则约束格式。</div></div>
+</div>
+</div>
+<label class="understood"><input type="checkbox" data-done="c3"> 我能讲清工具调用的往返、stop reason 和异常处理</label>
 </section>
 
-<!-- 4 -->
 <section class="ch" id="c4" data-t="Agent Loop" data-part="原理" data-imp="must">
-  <div class="eyebrow">第 4 章 <span class="imp must">核心 · 建议手写</span></div>
-  <h2>Agent Loop：harness 的心脏</h2>
-
-  <h3><span class="lv l1">基础</span>循环本身</h3>
-  <div class="prose">
-  <p><b>调用模型 → 有工具调用就执行并回填 → 再调用模型 → 直到不再调用工具。</b>这就是 ReAct（Reason + Act，2022）思路的工程实现。“一次模型回复 + 它引出的工具执行”叫一个 <b>turn</b>。</p>
-  <p>不再调用工具时有两种情况：任务完成，或者<b>需要用户补充信息</b>（缺关键参数、所有方案都走不通、要做不可逆的操作）。停下来问人是循环的正常出口，不是失败。逐步点击模拟器，观察代码、事件和 messages 的变化：</p>
-  </div>
-  <details class="term" data-term="react"><summary><b>ReAct</b><span class="st absorbed">已练进模型</span><span class="one">循环结构留下来了，主流模型不再依赖显式文本模板</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2022-01</time><span>Chain-of-Thought 论文：让模型“一步步想”能显著提升推理。</span></li>
-      <li><time>2022-10</time><span>ReAct 论文：思考（Thought）、行动（Action）、观察（Observation）交替进行。当时靠提示词模板实现，harness 用正则从文本里解析出 Action。</span></li>
-      <li><time>2023-06</time><span>function calling 出现，Action 不再靠正则解析，变成结构化输出。</span></li>
-      <li><time>2024-09 → 2025</time><span>o1、DeepSeek-R1、Claude 的 extended thinking 等推理模型出现；随后推理和工具调用在模型内部交织进行，通过强化学习训练出来。</span></li>
-    </ul>
-    <p class="rel"><b>现在：</b>支持原生推理和工具调用的模型，通常不必再在提示词里写“Thought: … Action: …”，这部分能力练进了模型；显式模板仍可以用，用不用取决于模型、任务和 harness 的设计；但“想 → 调工具 → 看结果 → 再想”这个循环本身就是今天每个 harness 的主循环。这是“练进模型”的典型样子：<b>思想留下，实现方式转进了模型里</b>。</p>
-  </div></details>
-  <div class="panel" id="sim">
-    <div class="panel-title"><span>Agent Loop 模拟器</span><small id="simStep">第 0 / 0 步</small></div>
-    <div class="sim">
-      <div style="min-width:0">
-        <div class="code"><div class="hd"><span>AgentLoop.java</span><span>伪代码</span></div><pre id="simCode"></pre></div>
-        <div class="note" id="simNote"></div>
-        <div class="events" id="simEvents" aria-label="本步发出的事件"></div>
-      </div>
-      <div class="ctx">
-        <div class="hd"><span>messages（发给模型的上下文）</span><span id="simCount">0 条</span></div>
-        <div class="list" id="simList"></div>
-      </div>
+<div class="eyebrow">第 4 章 <span class="imp must">核心 · 建议手写</span></div>
+<h2>Agent Loop：harness 的心脏</h2>
+<h3><span class="lv l1">基础</span>循环本身</h3>
+<div class="prose">
+<p><b>调用模型 → 有工具调用就执行并回填 → 再调用模型 → 直到不再调用工具。</b>这就是 ReAct（Reason + Act，2022）思路的工程实现。“一次模型回复 + 它引出的工具执行”叫一个 <b>turn</b>。</p>
+<p>不再调用工具时有两种情况：任务完成，或者<b>需要用户补充信息</b>（缺关键参数、所有方案都走不通、要做不可逆的操作）。停下来问人是循环的正常出口，不是失败。逐步点击模拟器，观察代码、事件和 messages 的变化：</p>
+</div>
+<details class="term" data-term="react"><summary><b>ReAct</b><span class="st absorbed">已练进模型</span><span class="one">循环结构留下来了，主流模型不再依赖显式文本模板</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2022-01</time><span>Chain-of-Thought 论文：让模型“一步步想”能显著提升推理。</span></li>
+<li><time>2022-10</time><span>ReAct 论文：思考（Thought）、行动（Action）、观察（Observation）交替进行。当时靠提示词模板实现，harness 用正则从文本里解析出 Action。</span></li>
+<li><time>2023-06</time><span>function calling 出现，Action 不再靠正则解析，变成结构化输出。</span></li>
+<li><time>2024-09 → 2025</time><span>o1、DeepSeek-R1、Claude 的 extended thinking 等推理模型出现；随后推理和工具调用在模型内部交织进行，通过强化学习训练出来。</span></li>
+</ul>
+<p class="rel"><b>现在：</b>支持原生推理和工具调用的模型，通常不必再在提示词里写“Thought: … Action: …”，这部分能力练进了模型；显式模板仍可以用，用不用取决于模型、任务和 harness 的设计；但“想 → 调工具 → 看结果 → 再想”这个循环本身就是今天每个 harness 的主循环。这是“练进模型”的典型样子：<b>思想留下，实现方式转进了模型里</b>。</p>
+</div></details>
+<div class="panel" id="sim">
+  <div class="panel-title"><span>Agent Loop 模拟器</span><small id="simStep">第 0 / 0 步</small></div>
+  <div class="sim">
+    <div style="min-width:0">
+      <div class="code"><div class="hd"><span>AgentLoop.java</span><span>伪代码</span></div><pre id="simCode"></pre></div>
+      <div class="note" id="simNote"></div>
+      <div class="events" id="simEvents" aria-label="本步发出的事件"></div>
     </div>
-    <div class="stats"><span>turn <b id="stTurn">0</b></span><span>模型调用 <b id="stCalls">0</b> 次</span><span>工具执行 <b id="stTools">0</b> 次</span><span>本次请求约 <b id="stTok">0</b> token</span></div>
-    <div class="row" style="margin-top:14px">
-      <button class="btn" id="simPrev">上一步</button>
-      <button class="btn pri" id="simNext">下一步</button>
-      <button class="btn" id="simPlay">自动播放</button>
-      <button class="btn" id="simReset">重置</button>
+    <div class="ctx">
+      <div class="hd"><span>messages（发给模型的上下文）</span><span id="simCount">0 条</span></div>
+      <div class="list" id="simList"></div>
     </div>
   </div>
-
-  <div class="callout"><b class="h">第一次写循环就要带上的两样东西</b><b>限制动作：</b>只注册这个任务需要的工具，限定工作目录，给每次执行设超时，删除、推送这类不可逆操作先停下来问人。这是最小的安全边界，完整的做法在第 13 章。<br><b>判断完成：</b>开始前写下成功标准，比如“这几个测试通过、构建不报错”，循环结束后由程序检查。模型说“完成了”不算数。完整的做法在第 9、15 章。</div>
-
-  <h3><span class="lv l2">进阶</span>生产级的 Java 版本</h3>
-  <div class="prose"><p>只有 while 循环的版本离生产很远。下面标注的 9 处才是真正的工程量：</p></div>
-  <div class="code"><div class="hd"><span>AgentLoop.java</span><span>Java 21 · 参考实现</span></div><pre><span class="k">public final class</span> AgentLoop {
-    <span class="k">private static final int</span> MAX_TURNS = 50;                    <span class="c">// ① 防止死循环</span>
-    <span class="k">private final</span> LlmClient llm;
-    <span class="k">private final</span> Map&lt;String, Tool&gt; tools;
-    <span class="k">private final</span> ToolGuard guard;
-    <span class="k">private final</span> ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor();
+  <div class="stats"><span>turn <b id="stTurn">0</b></span><span>模型调用 <b id="stCalls">0</b> 次</span><span>工具执行 <b id="stTools">0</b> 次</span><span>本次请求约 <b id="stTok">0</b> token</span></div>
+  <div class="row" style="margin-top:14px">
+    <button class="btn" id="simPrev">上一步</button>
+    <button class="btn pri" id="simNext">下一步</button>
+    <button class="btn" id="simPlay">自动播放</button>
+    <button class="btn" id="simReset">重置</button>
+  </div>
+</div>
+<div class="callout"><b class="h">第一次写循环就要带上的两样东西</b><p><b>限制动作：</b>只注册这个任务需要的工具，限定工作目录，给每次执行设超时，删除、推送这类不可逆操作先停下来问人。这是最小的安全边界，完整的做法在第 13 章。<br>
+<b>判断完成：</b>开始前写下成功标准，比如“这几个测试通过、构建不报错”，循环结束后由程序检查。模型说“完成了”不算数。完整的做法在第 9、15 章。</p>
+</div>
+<h3><span class="lv l2">进阶</span>生产级的 Java 版本</h3>
+<div class="prose">
+<p>只有 while 循环的版本离生产很远。下面标注的 9 处才是真正的工程量：</p>
+</div>
+<div class="code"><div class="hd"><span>AgentLoop.java</span><span>Java 21 · 参考实现</span></div><pre><span class="k">public</span> <span class="k">final</span> <span class="k">class</span> AgentLoop {
+    <span class="k">private</span> <span class="k">static</span> <span class="k">final</span> <span class="k">int</span> MAX_TURNS = 50;                    <span class="c">// ① 防止死循环</span>
+    <span class="k">private</span> <span class="k">final</span> LlmClient llm;
+    <span class="k">private</span> <span class="k">final</span> Map&lt;String, Tool&gt; tools;
+    <span class="k">private</span> <span class="k">final</span> ToolGuard guard;
+    <span class="k">private</span> <span class="k">final</span> ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor();
 
     <span class="k">public</span> String run(Session session, String input, CancelToken cancel) {
         session.append(Message.user(input));
@@ -509,7 +657,7 @@
             AssistantMessage reply = llm.complete(session.buildContext(), toolSpecs());
             session.append(reply);                                    <span class="c">// 先持久化，崩溃后可恢复</span>
             <span class="k">switch</span> (reply.stopReason()) {
-                <span class="k">case</span> ERROR, ABORTED -&gt; <span class="k">throw new</span> AgentException(reply.errorMessage());
+                <span class="k">case</span> ERROR, ABORTED -&gt; <span class="k">throw</span> <span class="k">new</span> AgentException(reply.errorMessage());
                 <span class="k">case</span> LENGTH -&gt; {                                      <span class="c">// ③ 截断的工具调用不执行</span>
                     reply.toolCalls().forEach(c -&gt; session.append(Message.toolError(c.id(), <span class="s">"output truncated"</span>)));
                     <span class="k">continue</span>;
@@ -528,7 +676,7 @@
                 .toList();
             futures.forEach(f -&gt; session.append(f.join()));           <span class="c">// ⑥ 按调用顺序回填</span>
         }
-        <span class="k">throw new</span> AgentException(<span class="s">"exceeded "</span> + MAX_TURNS + <span class="s">" turns"</span>);
+        <span class="k">throw</span> <span class="k">new</span> AgentException(<span class="s">"exceeded "</span> + MAX_TURNS + <span class="s">" turns"</span>);
     }
 
     <span class="k">private</span> Prepared prepare(ToolCall call) {
@@ -552,11 +700,11 @@
         }
     }
 }</pre></div>
-  <div class="callout"><b class="h">容易忽略的问题</b><code>completeOnTimeout</code> 只是让 future 提前返回默认值，<b>底层任务还在跑</b>。如果工具是一个 shell 进程，超时后必须真正杀掉它，而且要杀整个进程树（<code>ProcessHandle.descendants()</code> 逐个 <code>destroyForcibly()</code>），否则 <code>mvn</code> 拉起的子 JVM 会成为孤儿进程。pi 的 bash 工具正是这么做的（第 7 章）。</div>
-
-  <h3><span class="lv l3">深入</span>pi 的 runLoop：两层循环 + 两阶段执行</h3>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">两层循环分开处理“运行中插话”和“结束后追加”；循环只认注入的钩子，不认识会话和扩展。</span><span class="pf">packages/agent/src/agent-loop.ts · runLoop()</span></summary><div class="pb">
-    <div class="code"><div class="hd"><span>runLoop（节选并简化）</span><span>agent-loop.ts</span></div><pre><span class="k">let</span> pendingMessages = <span class="k">await</span> config.getSteeringMessages?.() || [];
+<div class="callout"><b class="h">容易忽略的问题</b><p><code>completeOnTimeout</code> 只是让 future 提前返回默认值，<b>底层任务还在跑</b>。如果工具是一个 shell 进程，超时后必须真正杀掉它，而且要杀整个进程树（<code>ProcessHandle.descendants()</code> 逐个 <code>destroyForcibly()</code>），否则 <code>mvn</code> 拉起的子 JVM 会成为孤儿进程。pi 的 bash 工具正是这么做的（第 7 章）。</p>
+</div>
+<h3><span class="lv l3">深入</span>pi 的 runLoop：两层循环 + 两阶段执行</h3>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">两层循环分开处理“运行中插话”和“结束后追加”；循环只认注入的钩子，不认识会话和扩展。</span><span class="pf">packages/agent/src/agent-loop.ts · runLoop()</span></summary><div class="pb">
+<div class="code"><div class="hd"><span>runLoop（节选并简化）</span><span>agent-loop.ts</span></div><pre><span class="k">let</span> pendingMessages = <span class="k">await</span> config.getSteeringMessages?.() || [];
 
 <span class="k">while</span> (<span class="k">true</span>) {                                  <span class="c">// 外层：处理 follow-up（任务结束后才发的消息）</span>
   <span class="k">let</span> hasMoreToolCalls = <span class="k">true</span>;
@@ -568,7 +716,7 @@
     <span class="k">const</span> message = <span class="k">await</span> streamAssistantResponse(currentContext, config, signal, emit, streamFn);
     <span class="k">if</span> (message.stopReason === <span class="s">"error"</span> || message.stopReason === <span class="s">"aborted"</span>) { <span class="c">/* turn_end, agent_end */</span> <span class="k">return</span>; }
 
-    <span class="k">const</span> toolCalls = message.content.filter(c =&gt; c.type === <span class="s">"toolCall"</span>);
+    <span class="k">const</span> toolCalls = message.content.filter(c =&gt; c.<span class="k">type</span> === <span class="s">"toolCall"</span>);
     hasMoreToolCalls = <span class="k">false</span>;
     <span class="k">if</span> (toolCalls.length &gt; 0) {
       <span class="k">const</span> batch = message.stopReason === <span class="s">"length"</span>
@@ -578,7 +726,7 @@
       <span class="k">for</span> (<span class="k">const</span> r <span class="k">of</span> batch.messages) currentContext.messages.push(r);
     }
     <span class="k">const</span> decision = <span class="k">await</span> config.finishTurn?.(...);   <span class="c">// 可以要求结束或再跑一轮</span>
-    <span class="k">await</span> emit({ type: <span class="s">"turn_end"</span>, message, toolResults });
+    <span class="k">await</span> emit({ <span class="k">type</span>: <span class="s">"turn_end"</span>, message, toolResults });
     <span class="k">if</span> (decision?.action === <span class="s">"end"</span>) { <span class="c">/* agent_end */</span> <span class="k">return</span>; }
     pendingMessages = <span class="k">await</span> config.getSteeringMessages?.() || [];
   }
@@ -586,394 +734,513 @@
   <span class="k">if</span> (followUps.length &gt; 0) { pendingMessages = followUps; <span class="k">continue</span>; }
   <span class="k">break</span>;
 }
-<span class="k">await</span> emit({ type: <span class="s">"agent_end"</span>, messages: newMessages });</pre></div>
-    <p>几个值得学的设计：</p>
-    <ul>
-      <li><b>两层循环</b>把“运行中插话”（steering，内层每个 turn 结束时检查）和“结束后追加”（follow-up，外层在本该停下时检查）分开。</li>
-      <li><b>两阶段执行</b>（<code>executeToolCallsParallel</code>）：先按顺序对每个调用做 <code>prepareToolCall</code>（查找工具 → 参数预处理 → schema 校验 → <code>beforeToolCall</code> 钩子），通过的再用 <code>Promise.all</code> 并行执行。这样权限弹窗是一个一个出现的，而执行仍然并行。</li>
-      <li><b>按源顺序回填</b>：<code>tool_execution_end</code> 事件按完成顺序发出（界面更实时），但持久化的 toolResult 消息按 assistant 消息里的原顺序排列。</li>
-      <li><b>terminate 要整批同意</b>：工具结果可以带 <code>terminate: true</code> 表示“这批做完就别再请求模型了”，但只有<b>整批所有结果都同意</b>时才生效，避免一个工具擅自中断其他工具的后续。</li>
-      <li><b>可串行化</b>：任一工具声明 <code>executionMode: "sequential"</code>，整批就退化为串行，用于共享可变状态的工具。</li>
-      <li><b>钩子注入</b>：压缩、上下文变换、权限、结束判定都是 <code>config</code> 上的函数，循环本身不认识“会话”“扩展”这些上层概念，可以用假的 LLM 单独测试（第 15 章）。</li>
-    </ul>
-  </div></details>
-
-  <div class="qa-wrap">
-    <div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
-    <details class="qa"><summary>写一个 agent loop，并说明它的终止条件。</summary><div class="ans">
-      <ul>
-        <li>正常终止：回复中没有工具调用。可能是做完了，也可能是需要用户补充信息或确认。</li>
-        <li>异常终止：出错或被中止、达到最大轮数、超过 token / 费用预算、整体超时、用户取消、所有工具结果要求 terminate。</li>
-        <li>写完主体后主动补充：参数校验、权限钩子、两阶段执行、超时并杀进程树、结果截断、按序回填、每步持久化。</li>
-      </ul>
-    </div></details>
-    <details class="qa"><summary>Agent 陷入死循环（反复调同一个工具）怎么办？</summary><div class="ans">
-      <ul>
-        <li>硬限制：最大轮数、token / 费用预算、墙钟超时。</li>
-        <li>检测：对 (工具名, 参数) 做哈希，连续 N 次相同就注入提示或终止。</li>
-        <li>根因：通常是错误信息不够清楚，模型不知道错在哪。改进错误信息比加限制更有效。</li>
-        <li>给人留出口：随时中止和 steering。</li>
-      </ul>
-    </div></details>
-    <details class="qa"><summary>并行执行工具时，权限确认怎么处理？</summary><div class="ans">
-      <ul>
-        <li>如果在并行任务里各自弹确认框，用户会同时看到多个弹窗，且顺序混乱。</li>
-        <li>做法是两阶段：先顺序跑完所有前置检查（含人工确认），再并行执行通过的调用。pi 的 <code>executeToolCallsParallel</code> 就是这样。</li>
-        <li>被拒绝的调用直接生成错误结果，不进入执行阶段。</li>
-      </ul>
-    </div></details>
-  </div>
-  <div class="ahead"><b class="h">前瞻 · 本章</b><ul>
-    <li><span class="cf sure">已有证据</span>到目前为止，loop 本身的结构没有变。变的是它能接下多长的任务：METR 的 2019–2025 数据显示，agent 能以 50% 成功率完成的任务，其长度（按人类专家所需时间算）大约每 7 个月翻一番。这衡量的是任务难度，不是 agent 自己连续跑了多久；不过实际产品里，单次运行也确实已从几分钟走向几小时。</li>
-    <li><span class="cf likely">作者判断</span>运行变长之后，工程重点从“内层循环”移到“外层循环”：跨上下文窗口、跨会话、跨进程重启怎么接着干（第 9、10 章的长任务部分）。</li>
-    <li><span class="cf likely">作者判断</span>中途插话（steering）和排队消息会成为标配，因为人不会守着一个跑几小时的任务等它结束。pi 的两层循环正是为此设计的。</li>
-  </ul></div>
-  <label class="understood"><input type="checkbox" data-done="c4"> 我能写出带护栏的 loop，并讲清 pi 的两层循环和两阶段执行</label>
+<span class="k">await</span> emit({ <span class="k">type</span>: <span class="s">"agent_end"</span>, messages: newMessages });</pre></div>
+<p>几个值得学的设计：</p>
+<ul>
+<li><b>两层循环</b>把“运行中插话”（steering，内层每个 turn 结束时检查）和“结束后追加”（follow-up，外层在本该停下时检查）分开。</li>
+<li><b>两阶段执行</b>（<code>executeToolCallsParallel</code>）：先按顺序对每个调用做 <code>prepareToolCall</code>（查找工具 → 参数预处理 → schema 校验 → <code>beforeToolCall</code> 钩子），通过的再用 <code>Promise.all</code> 并行执行。这样权限弹窗是一个一个出现的，而执行仍然并行。</li>
+<li><b>按源顺序回填</b>：<code>tool_execution_end</code> 事件按完成顺序发出（界面更实时），但持久化的 toolResult 消息按 assistant 消息里的原顺序排列。</li>
+<li><b>terminate 要整批同意</b>：工具结果可以带 <code>terminate: true</code> 表示“这批做完就别再请求模型了”，但只有<b>整批所有结果都同意</b>时才生效，避免一个工具擅自中断其他工具的后续。</li>
+<li><b>可串行化</b>：任一工具声明 <code>executionMode: &quot;sequential&quot;</code>，整批就退化为串行，用于共享可变状态的工具。</li>
+<li><b>钩子注入</b>：压缩、上下文变换、权限、结束判定都是 <code>config</code> 上的函数，循环本身不认识“会话”“扩展”这些上层概念，可以用假的 LLM 单独测试（第 15 章）。</li>
+</ul>
+</div></details>
+<div class="qa-wrap">
+<div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
+<details class="qa"><summary>写一个 agent loop，并说明它的终止条件。</summary><div class="ans">
+<ul>
+<li>正常终止：回复中没有工具调用。可能是做完了，也可能是需要用户补充信息或确认。</li>
+<li>异常终止：出错或被中止、达到最大轮数、超过 token / 费用预算、整体超时、用户取消、所有工具结果要求 terminate。</li>
+<li>写完主体后主动补充：参数校验、权限钩子、两阶段执行、超时并杀进程树、结果截断、按序回填、每步持久化。</li>
+</ul>
+</div></details>
+<details class="qa"><summary>Agent 陷入死循环（反复调同一个工具）怎么办？</summary><div class="ans">
+<ul>
+<li>硬限制：最大轮数、token / 费用预算、墙钟超时。</li>
+<li>检测：对 (工具名, 参数) 做哈希，连续 N 次相同就注入提示或终止。</li>
+<li>根因：通常是错误信息不够清楚，模型不知道错在哪。改进错误信息比加限制更有效。</li>
+<li>给人留出口：随时中止和 steering。</li>
+</ul>
+</div></details>
+<details class="qa"><summary>并行执行工具时，权限确认怎么处理？</summary><div class="ans">
+<ul>
+<li>如果在并行任务里各自弹确认框，用户会同时看到多个弹窗，且顺序混乱。</li>
+<li>做法是两阶段：先顺序跑完所有前置检查（含人工确认），再并行执行通过的调用。pi 的 <code>executeToolCallsParallel</code> 就是这样。</li>
+<li>被拒绝的调用直接生成错误结果，不进入执行阶段。</li>
+</ul>
+</div></details>
+</div>
+<div class="ahead"><b class="h">前瞻 · 本章</b><ul>
+<li><span class="cf sure">已有证据</span>到目前为止，loop 本身的结构没有变。变的是它能接下多长的任务：METR 的 2019–2025 数据显示，agent 能以 50% 成功率完成的任务，其长度（按人类专家所需时间算）大约每 7 个月翻一番。这衡量的是任务难度，不是 agent 自己连续跑了多久；不过实际产品里，单次运行也确实已从几分钟走向几小时。</li>
+<li><span class="cf likely">作者判断</span>运行变长之后，工程重点从“内层循环”移到“外层循环”：跨上下文窗口、跨会话、跨进程重启怎么接着干（第 9、10 章的长任务部分）。</li>
+<li><span class="cf likely">作者判断</span>中途插话（steering）和排队消息会成为标配，因为人不会守着一个跑几小时的任务等它结束。pi 的两层循环正是为此设计的。</li>
+</ul>
+</div>
+<div class="selftest" data-quiz>
+<div class="qa-head"><span>自测</span><span class="score">1 题</span></div>
+<div>
+<div class="q" data-a="1"><div class="qt">pi 并行执行工具时，权限钩子（beforeToolCall）是怎么跑的？</div><div class="opts"><button class="opt">也并行</button><button class="opt">先按顺序对每个调用做校验和钩子，再并行执行通过的</button><button class="opt">执行完再检查</button></div><div class="why" hidden><span class="verdict"></span>两阶段：串行准备、并行执行。确认弹窗不会同时冒出来。</div></div>
+</div>
+</div>
+<label class="understood"><input type="checkbox" data-done="c4"> 我能写出带护栏的 loop，并讲清 pi 的两层循环和两阶段执行</label>
 </section>
 
-<!-- 5 -->
 <section class="ch" id="c5" data-t="上下文工程" data-part="原理" data-imp="must">
-  <div class="eyebrow">第 5 章 <span class="imp must">核心</span></div>
-  <h2>上下文工程（Context Engineering）</h2>
-
-  <h3><span class="lv l1">基础</span>上下文由什么组成，为什么不能无限塞</h3>
-  <div class="prose">
-  <p>模型每一轮看到的上下文，可以拆成五个槽位。harness 的工作就是<b>每一轮从这五处挑选内容、拼成一次请求</b>。后面讲的各种技巧，都是在决定某个槽位放什么、放多少：</p>
+<div class="eyebrow">第 5 章 <span class="imp must">核心</span></div>
+<h2>上下文工程（Context Engineering）</h2>
+<h3><span class="lv l1">基础</span>上下文由什么组成，为什么不能无限塞</h3>
+<div class="prose">
+<p>模型每一轮看到的上下文，可以拆成五个槽位。harness 的工作就是<b>每一轮从这五处挑选内容、拼成一次请求</b>。后面讲的各种技巧，都是在决定某个槽位放什么、放多少：</p>
+</div>
+<div class="slots">
+  <div class="s-sys"><b>system prompt</b><span>角色、规则、项目约定（AGENTS.md）、skill 索引</span></div>
+  <div class="s-user"><b>用户消息</b><span>这次任务的目标和约束</span></div>
+  <div class="s-mem"><b>记忆</b><span>压缩摘要、进度文件、跨会话的笔记（第 8 章）</span></div>
+  <div class="s-tools"><b>工具列表</b><span>名字、描述、参数 schema（第 7、16 章）</span></div>
+  <div class="s-res"><b>历史与工具结果</b><span>之前的调用和返回，增长最快</span></div>
+</div>
+<div class="slots-arrow">↓ harness 挑选、裁剪、排序（顺序还影响缓存，第 6 章）</div>
+<div class="slots-out">本次请求的上下文 → 模型</div>
+<div class="prose">
+<p>工具结果通常是增长最快的部分。为什么不能全都塞进去：</p>
+<ul>
+<li><b>硬上限：</b>超过上下文窗口，请求直接失败。</li>
+<li><b>成本：</b>每个 turn 都重发全部历史，单次输入随轮数线性增长，整个任务的总输入近似平方增长。</li>
+<li><b>效果：</b>上下文越长，模型对中间信息的利用越差，指令遵循也变弱（常被称为 context rot、lost in the middle）。</li>
+</ul>
+</div>
+<details class="term" data-term="ctxeng"><summary><b>Context engineering</b><span class="st stable">稳定</span><span class="one">2025 年中出现，取代 prompt engineering 成为主流说法</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2020–24</time><span>prompt engineering：琢磨措辞、角色扮演、few-shot 示例。面向的是单次调用。</span></li>
+<li><time>2025-06</time><span>Shopify CEO Tobi Lütke 提出用 context engineering 代替 prompt engineering，Karpathy 附和：“在每一步给模型恰好需要的信息”是一门手艺。</span></li>
+<li><time>2025-07</time><span>Manus 团队发表《Context Engineering for AI Agents》，总结了 KV 缓存命中率、保留错误、复述目标等实战经验（见下文）。</span></li>
+<li><time>2025-09</time><span>Anthropic 发表《Effective context engineering for AI agents》，这个说法被广泛采用。</span></li>
+<li><time>2026</time><span>讨论范围再扩大到 harness engineering（第 1 章名词卡）。</span></li>
+</ul>
+<p class="rel"><b>为什么换词：</b>agent 一次任务有几十轮，每轮的上下文由 system prompt、工具定义、历史、工具结果、记忆共同组成，措辞只是其中很小一块。换词反映的是<b>问题的重心从“怎么说”变成了“放什么、放多少、什么时候放”</b>。</p>
+</div></details>
+<details class="term" data-term="longctx"><summary><b>长上下文 / “RAG 已死”</b><span class="st debate">仍在演变</span><span class="one">窗口变大没有让上下文管理消失</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2024-02</time><span>Gemini 1.5 支持 100 万 token 上下文，“RAG 已死”的说法流行起来：全塞进去不就行了？</span></li>
+<li><time>2025-07</time><span>Chroma 的 Context Rot 研究在 18 个模型上测得：输入越长，表现越不稳定，即使任务很简单。</span></li>
+<li><time>2025–26</time><span>百万级窗口成为高端模型的常见配置，但 coding agent 仍普遍在远未填满时就压缩。</span></li>
+</ul>
+<p class="rel"><b>结论：</b>窗口大小是“能放多少”，不是“放了能用好多少”。大窗口让压缩来得更晚、让子 agent 能看得更多，但上下文工程的必要性没变。</p>
+</div></details>
+<h3><span class="lv l2">进阶</span>五种控制手段</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>手段</th>
+<th>做法</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>工具输出截断</td>
+<td>单次结果限制行数或字节，全文写临时文件并告诉模型路径</td>
+<td>需要时得再读</td>
+</tr>
+<tr>
+<td>渐进式披露</td>
+<td>只放索引（名字 + 描述），需要时再读全文</td>
+<td>模型可能不去读</td>
+</tr>
+<tr>
+<td>压缩（摘要）</td>
+<td>接近上限时把旧历史总结成摘要，保留最近消息</td>
+<td>丢细节、花钱、缓存失效</td>
+</tr>
+<tr>
+<td>清理旧工具结果</td>
+<td>早期大块输出替换成占位说明</td>
+<td>需要时得重新获取</td>
+</tr>
+<tr>
+<td>子 agent 隔离</td>
+<td>大量中间结果留在子 agent 里，只返回结论</td>
+<td>多一次 agent 的成本</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>此外还有几条被生产环境反复验证过的经验，出自 Manus 团队 2025 年的总结，后来被很多 harness 采纳：</p>
+<ul>
+<li><b>保留失败记录。</b>报错、失败的尝试不要从上下文里删掉。模型看到“这条路走不通”，才不会重复犯错。</li>
+<li><b>复述目标。</b>长任务里让 agent 维护一份 todo 文件并不断更新，相当于把目标反复写到上下文末尾，对抗“中间信息被遗忘”。</li>
+<li><b>文件系统是外部上下文。</b>大块内容写进文件，上下文里只留路径；需要时再读。只要路径还在，压缩就是可恢复的。</li>
+<li><b>避免示例导致的惯性。</b>上下文里一连串格式相同的操作会让模型机械模仿。适当加入一些变化。</li>
+</ul>
+</div>
+<div class="panel" id="budget">
+  <div class="panel-title"><span>上下文预算模拟</span><small>窗口 200k · 压缩参数取 pi 默认值</small></div>
+  <div class="bar" id="bBar" role="img" aria-label="上下文占用"></div>
+  <div class="legend" id="bLegend"></div>
+  <div class="ctrl">
+    <label for="bTurns">对话已进行</label>
+    <input type="range" id="bTurns" min="0" max="45" value="8">
+    <span><b id="bTurnsV">8</b> 个 turn</span>
   </div>
-  <div class="slots">
-    <div class="s-sys"><b>system prompt</b><span>角色、规则、项目约定（AGENTS.md）、skill 索引</span></div>
-    <div class="s-user"><b>用户消息</b><span>这次任务的目标和约束</span></div>
-    <div class="s-mem"><b>记忆</b><span>压缩摘要、进度文件、跨会话的笔记（第 8 章）</span></div>
-    <div class="s-tools"><b>工具列表</b><span>名字、描述、参数 schema（第 7、16 章）</span></div>
-    <div class="s-res"><b>历史与工具结果</b><span>之前的调用和返回，增长最快</span></div>
+  <div class="checks">
+    <label><input type="checkbox" id="bSkills"> 把 12 个 skill 的全文都塞进 system prompt</label>
+    <label><input type="checkbox" id="bCompact" checked> 开启自动压缩</label>
   </div>
-  <div class="slots-arrow">↓ harness 挑选、裁剪、排序（顺序还影响缓存，第 6 章）</div>
-  <div class="slots-out">本次请求的上下文 → 模型</div>
-  <div class="prose">
-  <p>工具结果通常是增长最快的部分。为什么不能全都塞进去：</p>
-  <ul>
-    <li><b>硬上限：</b>超过上下文窗口，请求直接失败。</li>
-    <li><b>成本：</b>每个 turn 都重发全部历史，单次输入随轮数线性增长，整个任务的总输入近似平方增长。</li>
-    <li><b>效果：</b>上下文越长，模型对中间信息的利用越差，指令遵循也变弱（常被称为 context rot、lost in the middle）。</li>
-  </ul>
+  <div class="status" id="bStatus"></div>
+  <p class="small" style="margin-bottom:0">红线 = 窗口 − <code>reserveTokens</code>（16384，给回复预留），超过就压缩；压缩后保留最近约 <code>keepRecentTokens</code>（20000）。每个 turn 按增加 7k token 估算。</p>
+</div>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">最近一次厂商报告的真实用量，加上之后新增内容按“字符 ÷ 4”估算。</span><span class="pf">coding-agent/src/core/compaction/compaction.ts · estimateContextTokens()</span></summary><div class="pb">
+<p><b>token 怎么算：</b>精确计数要调厂商接口，太慢。pi 的做法是取<b>最近一条 assistant 消息里厂商报告的真实用量</b>作为基数，再对它之后新增的消息按“字符数 ÷ 4”估算。既准确又不用额外请求。</p>
+</div></details>
+<h3><span class="lv l3">深入</span>pi 的 system prompt 与压缩算法</h3>
+<div class="prose">
+<p>pi 的 system prompt 由 <code>system-prompt.ts</code> 按命名 section 拼装。下面的拼装器使用源码里的真实文本（docs 段已省略），勾选看变化：</p>
+</div>
+<div class="panel">
+  <div class="panel-title"><span>system prompt 拼装器</span><small>依据 system-prompt.ts 与 tools/*.ts</small></div>
+  <div class="checks">
+    <label><input type="checkbox" id="pbAgents" checked> 项目有 AGENTS.md</label>
+    <label><input type="checkbox" id="pbAppend"> 有 APPEND_SYSTEM.md</label>
+    <label><input type="checkbox" id="pbSkills" checked> 装了 2 个 skill</label>
+    <label><input type="checkbox" id="pbSearch"> 启用 grep / find / ls</label>
+    <label><input type="checkbox" id="pbSystem"> 用 SYSTEM.md 整体替换</label>
   </div>
-  <details class="term" data-term="ctxeng"><summary><b>Context engineering</b><span class="st stable">稳定</span><span class="one">2025 年中出现，取代 prompt engineering 成为主流说法</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2020–24</time><span>prompt engineering：琢磨措辞、角色扮演、few-shot 示例。面向的是单次调用。</span></li>
-      <li><time>2025-06</time><span>Shopify CEO Tobi Lütke 提出用 context engineering 代替 prompt engineering，Karpathy 附和：“在每一步给模型恰好需要的信息”是一门手艺。</span></li>
-      <li><time>2025-07</time><span>Manus 团队发表《Context Engineering for AI Agents》，总结了 KV 缓存命中率、保留错误、复述目标等实战经验（见下文）。</span></li>
-      <li><time>2025-09</time><span>Anthropic 发表《Effective context engineering for AI agents》，这个说法被广泛采用。</span></li>
-      <li><time>2026</time><span>讨论范围再扩大到 harness engineering（第 1 章名词卡）。</span></li>
-    </ul>
-    <p class="rel"><b>为什么换词：</b>agent 一次任务有几十轮，每轮的上下文由 system prompt、工具定义、历史、工具结果、记忆共同组成，措辞只是其中很小一块。换词反映的是<b>问题的重心从“怎么说”变成了“放什么、放多少、什么时候放”</b>。</p>
-  </div></details>
-  <details class="term" data-term="longctx"><summary><b>长上下文 vs “RAG 已死”</b><span class="st debate">仍在演变</span><span class="one">窗口变大没有让上下文管理消失</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2024-02</time><span>Gemini 1.5 支持 100 万 token 上下文，“RAG 已死”的说法流行起来：全塞进去不就行了？</span></li>
-      <li><time>2025-07</time><span>Chroma 的 Context Rot 研究在 18 个模型上测得：输入越长，表现越不稳定，即使任务很简单。</span></li>
-      <li><time>2025–26</time><span>百万级窗口成为高端模型的常见配置，但 coding agent 仍普遍在远未填满时就压缩。</span></li>
-    </ul>
-    <p class="rel"><b>结论：</b>窗口大小是“能放多少”，不是“放了能用好多少”。大窗口让压缩来得更晚、让子 agent 能看得更多，但上下文工程的必要性没变。</p>
-  </div></details>
-
-  <h3><span class="lv l2">进阶</span>五种控制手段</h3>
-  <div class="tbl"><table>
-    <thead><tr><th>手段</th><th>做法</th><th>代价</th></tr></thead>
-    <tbody>
-      <tr><td>工具输出截断</td><td>单次结果限制行数或字节，全文写临时文件并告诉模型路径</td><td>需要时得再读</td></tr>
-      <tr><td>渐进式披露</td><td>只放索引（名字 + 描述），需要时再读全文</td><td>模型可能不去读</td></tr>
-      <tr><td>压缩（摘要）</td><td>接近上限时把旧历史总结成摘要，保留最近消息</td><td>丢细节、花钱、缓存失效</td></tr>
-      <tr><td>清理旧工具结果</td><td>早期大块输出替换成占位说明</td><td>需要时得重新获取</td></tr>
-      <tr><td>子 agent 隔离</td><td>大量中间结果留在子 agent 里，只返回结论</td><td>多一次 agent 的成本</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose">
-  <p>此外还有几条被生产环境反复验证过的经验，出自 Manus 团队 2025 年的总结，后来被很多 harness 采纳：</p>
-  <ul>
-    <li><b>保留失败记录。</b>报错、失败的尝试不要从上下文里删掉。模型看到“这条路走不通”，才不会重复犯错。</li>
-    <li><b>复述目标。</b>长任务里让 agent 维护一份 todo 文件并不断更新，相当于把目标反复写到上下文末尾，对抗“中间信息被遗忘”。</li>
-    <li><b>文件系统是外部上下文。</b>大块内容写进文件，上下文里只留路径；需要时再读。只要路径还在，压缩就是可恢复的。</li>
-    <li><b>避免示例导致的惯性。</b>上下文里一连串格式相同的操作会让模型机械模仿。适当加入一些变化。</li>
-  </ul>
-  </div>
-  <div class="panel" id="budget">
-    <div class="panel-title"><span>上下文预算模拟</span><small>窗口 200k · 压缩参数取 pi 默认值</small></div>
-    <div class="bar" id="bBar" role="img" aria-label="上下文占用"></div>
-    <div class="legend" id="bLegend"></div>
-    <div class="ctrl">
-      <label for="bTurns">对话已进行</label>
-      <input type="range" id="bTurns" min="0" max="45" value="8">
-      <span><b id="bTurnsV">8</b> 个 turn</span>
-    </div>
-    <div class="checks">
-      <label><input type="checkbox" id="bSkills"> 把 12 个 skill 的全文都塞进 system prompt</label>
-      <label><input type="checkbox" id="bCompact" checked> 开启自动压缩</label>
-    </div>
-    <div class="status" id="bStatus"></div>
-    <p class="small" style="margin-bottom:0">红线 = 窗口 − <code>reserveTokens</code>（16384，给回复预留），超过就压缩；压缩后保留最近约 <code>keepRecentTokens</code>（20000）。每个 turn 按增加 7k token 估算。</p>
-  </div>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">最近一次厂商报告的真实用量，加上之后新增内容按“字符 ÷ 4”估算。</span><span class="pf">coding-agent/src/core/compaction/compaction.ts · estimateContextTokens()</span></summary><div class="pb">
-    <p><b>token 怎么算：</b>精确计数要调厂商接口，太慢。pi 的做法是取<b>最近一条 assistant 消息里厂商报告的真实用量</b>作为基数，再对它之后新增的消息按“字符数 ÷ 4”估算。既准确又不用额外请求。</p>
-  </div></details>
-
-  <h3><span class="lv l3">深入</span>pi 的 system prompt 与压缩算法</h3>
-  <div class="prose"><p>pi 的 system prompt 由 <code>system-prompt.ts</code> 按命名 section 拼装。下面的拼装器使用源码里的真实文本（docs 段已省略），勾选看变化：</p></div>
-  <div class="panel">
-    <div class="panel-title"><span>system prompt 拼装器</span><small>依据 system-prompt.ts 与 tools/*.ts</small></div>
-    <div class="checks">
-      <label><input type="checkbox" id="pbAgents" checked> 项目有 AGENTS.md</label>
-      <label><input type="checkbox" id="pbAppend"> 有 APPEND_SYSTEM.md</label>
-      <label><input type="checkbox" id="pbSkills" checked> 装了 2 个 skill</label>
-      <label><input type="checkbox" id="pbSearch"> 启用 grep / find / ls</label>
-      <label><input type="checkbox" id="pbSystem"> 用 SYSTEM.md 整体替换</label>
-    </div>
-    <div class="pb-out" id="pbOut" aria-live="polite"></div>
-    <div class="pb-meta"><span>约 <b id="pbTok">0</b> token</span><span id="pbSections"></span></div>
-  </div>
-  <div class="prose">
-  <ul>
-    <li><b>规则跟着工具走：</b>每个工具贡献一句说明和若干使用准则；没有 grep / find / ls 时自动加一条“用 bash 查找文件”。</li>
-    <li><b>按 section 增量更新：</b>会话里记录的是 section；之后某段变化（如新装 skill），只追加这一段的补丁，保持前缀稳定（第 6 章）。</li>
-  </ul>
-  </div>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">永不在工具结果处切；结构化摘要、增量更新；只追加不删除；溢出时压缩后只重试一次。</span><span class="pf">coding-agent/docs/compaction.md · compaction/compaction.ts</span></summary><div class="pb">
-    <p>压缩算法的细节，每一条都对应一个实际出过的问题：</p>
-    <ul>
-      <li><b>触发：</b><code>contextTokens &gt; contextWindow − reserveTokens</code>；多轮运行中在工具结果追加后、下一次请求前（<code>prepareNextTurn</code>）检查。</li>
-      <li><b>切分点：</b>从最新往回累计到 <code>keepRecentTokens</code>。<b>永远不在 toolResult 处切</b>，因为工具结果必须和它的调用在一起，否则厂商会拒绝请求。一般在用户消息边界切；单个用户回合本身就超预算时，在回合中间的 assistant 消息处切，并为前半段单独生成一份摘要再合并。</li>
-      <li><b>序列化防“接话”：</b>送去总结的历史被转成 <code>[User]: …</code>、<code>[Assistant tool calls]: read(path="foo.ts")</code> 这样的纯文本，避免模型把它当成对话继续下去；每条工具结果只保留前 2000 字符。</li>
-      <li><b>结构化摘要：</b>固定章节 Goal / Constraints &amp; Preferences / Progress（Done、In Progress、Blocked）/ Key Decisions / Next Steps / Critical Context，末尾附 <code>&lt;read-files&gt;</code> 和 <code>&lt;modified-files&gt;</code>。</li>
-      <li><b>增量摘要：</b>再次压缩时把上一次摘要作为输入，文件列表跨多次压缩累计。</li>
-      <li><b>只追加：</b>写入一条 compaction 记录（摘要 + <code>firstKeptEntryId</code> + <code>tokensBefore</code>），原记录不删。</li>
-      <li><b>溢出恢复：</b>厂商报上下文溢出时，压缩后重试一次；压缩失败就不重试，避免死循环。</li>
-    </ul>
-  </div></details>
-  <div class="prose">
-  <p><b>压缩正在转到厂商 API。</b>pi 自己实现压缩，但从 2025 年下半年起，厂商陆续提供了托管方案：</p>
-  </div>
-  <div class="tbl"><table>
-    <thead><tr><th>方案</th><th>做法</th><th>注意</th></tr></thead>
-    <tbody>
-      <tr><td>Anthropic 上下文编辑（2025-09）</td><td>服务端自动清掉旧的工具调用结果</td><td>改动了前缀，会影响缓存</td></tr>
-      <tr><td>Anthropic 服务端压缩（2026-02，beta）</td><td>超过阈值时由服务端生成摘要，返回一个 compaction 块，客户端原样带回</td><td>摘要可读，但生成逻辑不受你控制</td></tr>
-      <tr><td>OpenAI <code>/responses/compact</code></td><td>传入完整上下文，返回压缩后的新窗口，其中的压缩项是加密的</td><td>摘要不可读、不可审计，只能在同一厂商使用</td></tr>
-      <tr><td>自己实现（pi）</td><td>如本节所述</td><td>可控、可审计、可跨厂商，但要自己维护</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose"><p>取舍和第 3 章的“有状态 API”一样：托管省事，但牺牲可移植性和可审计性。需要跨厂商降级、需要审计的平台，通常仍然自己做，或者两种都支持、按模型选择。</p></div>
-
-  <div class="qa-wrap">
-    <div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
-    <details class="qa"><summary>对话超过上下文窗口了，怎么办？</summary><div class="ans">
-      <ul>
-        <li>先治源头：工具输出截断、大文件分段读、搜索交给子 agent。</li>
-        <li>再压缩：阈值 = 窗口 − 回复预留；保留最近 N token；结构化摘要；不在工具结果处切分。</li>
-        <li>原始记录不删，便于审计和回溯。</li>
-        <li>最后一道保护：溢出错误时压缩后重试一次。</li>
-        <li>点出代价：丢细节、摘要成本、缓存失效，阈值不能太激进。</li>
-      </ul>
-      <div class="follow"><b>再深一步：</b>为什么不能在 toolResult 处切？→ 主流 API 要求每个 tool_result 都有对应的 tool_use 在前面，切开会导致请求被拒绝。</div>
-    </div></details>
-    <details class="qa"><summary>怎么估算上下文的 token 数？</summary><div class="ans">
-      <ul>
-        <li>精确：调厂商的计数接口或本地 tokenizer，慢且各家不同。</li>
-        <li>实用：用最近一次响应里厂商报告的上下文总用量（输入、缓存读写，再加这条回复本身的输出）作为基数，加上之后新增内容的粗估（字符 ÷ 4）。pi 就是这么做的。</li>
-        <li>中文字符与 token 的比例和英文不同，粗估要留余量，这也是 reserveTokens 的作用之一。</li>
-      </ul>
-    </div></details>
-  </div>
-  <div class="ahead"><b class="h">前瞻 · 本章</b><ul>
-    <li><span class="cf sure">已有证据</span>窗口在变大，但长上下文的质量衰减被多项研究反复测到（Chroma 的 Context Rot 等），所以上下文仍要调度。</li>
-    <li><span class="cf sure">已有证据</span>Anthropic、OpenAI 都已提供托管的压缩或清理旧结果。harness 多了一个选择：自己实现，或用厂商的并补上审计。</li>
-    <li><span class="cf likely">作者判断</span>模型会被专门训练去适应压缩后的上下文、甚至自己决定何时压缩（已有厂商把“跨多个上下文窗口连续工作”作为模型卖点，学术界也在做学习型压缩）。到那时，pi 这种手写的切分规则会变薄。</li>
-    <li><span class="cf open">有争议</span>“清空上下文 + 结构化交接”和“压缩”哪个更好。不同模型、不同任务结论不同，需要自己评测（第 9 章长任务）。</li>
-  </ul></div>
-  <label class="understood"><input type="checkbox" data-done="c5"> 我能讲清五种手段，以及 pi 压缩算法的切分规则</label>
+  <div class="pb-out" id="pbOut" aria-live="polite"></div>
+  <div class="pb-meta"><span>约 <b id="pbTok">0</b> token</span><span id="pbSections"></span></div>
+</div>
+<div class="prose">
+<ul>
+<li><b>规则跟着工具走：</b>每个工具贡献一句说明和若干使用准则；没有 grep / find / ls 时自动加一条“用 bash 查找文件”。</li>
+<li><b>按 section 增量更新：</b>会话里记录的是 section；之后某段变化（如新装 skill），只追加这一段的补丁，保持前缀稳定（第 6 章）。</li>
+</ul>
+</div>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">永不在工具结果处切；结构化摘要、增量更新；只追加不删除；溢出时压缩后只重试一次。</span><span class="pf">coding-agent/docs/compaction.md · compaction/compaction.ts</span></summary><div class="pb">
+<p>压缩算法的细节，每一条都对应一个实际出过的问题：</p>
+<ul>
+<li><b>触发：</b><code>contextTokens &gt; contextWindow − reserveTokens</code>；多轮运行中在工具结果追加后、下一次请求前（<code>prepareNextTurn</code>）检查。</li>
+<li><b>切分点：</b>从最新往回累计到 <code>keepRecentTokens</code>。<b>永远不在 toolResult 处切</b>，因为工具结果必须和它的调用在一起，否则厂商会拒绝请求。一般在用户消息边界切；单个用户回合本身就超预算时，在回合中间的 assistant 消息处切，并为前半段单独生成一份摘要再合并。</li>
+<li><b>序列化防“接话”：</b>送去总结的历史被转成 <code>[User]: …</code>、<code>[Assistant tool calls]: read(path=&quot;foo.ts&quot;)</code> 这样的纯文本，避免模型把它当成对话继续下去；每条工具结果只保留前 2000 字符。</li>
+<li><b>结构化摘要：</b>固定章节 Goal / Constraints &amp; Preferences / Progress（Done、In Progress、Blocked）/ Key Decisions / Next Steps / Critical Context，末尾附 <code>&lt;read-files&gt;</code> 和 <code>&lt;modified-files&gt;</code>。</li>
+<li><b>增量摘要：</b>再次压缩时把上一次摘要作为输入，文件列表跨多次压缩累计。</li>
+<li><b>只追加：</b>写入一条 compaction 记录（摘要 + <code>firstKeptEntryId</code> + <code>tokensBefore</code>），原记录不删。</li>
+<li><b>溢出恢复：</b>厂商报上下文溢出时，压缩后重试一次；压缩失败就不重试，避免死循环。</li>
+</ul>
+</div></details>
+<div class="prose">
+<p><b>压缩正在转到厂商 API。</b>pi 自己实现压缩，但从 2025 年下半年起，厂商陆续提供了托管方案：</p>
+</div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>做法</th>
+<th>注意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Anthropic 上下文编辑（2025-09）</td>
+<td>服务端自动清掉旧的工具调用结果</td>
+<td>改动了前缀，会影响缓存</td>
+</tr>
+<tr>
+<td>Anthropic 服务端压缩（2026-02，beta）</td>
+<td>超过阈值时由服务端生成摘要，返回一个 compaction 块，客户端原样带回</td>
+<td>摘要可读，但生成逻辑不受你控制</td>
+</tr>
+<tr>
+<td>OpenAI <code>/responses/compact</code></td>
+<td>传入完整上下文，返回压缩后的新窗口，其中的压缩项是加密的</td>
+<td>摘要不可读、不可审计，只能在同一厂商使用</td>
+</tr>
+<tr>
+<td>自己实现（pi）</td>
+<td>如本节所述</td>
+<td>可控、可审计、可跨厂商，但要自己维护</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>取舍和第 3 章的“有状态 API”一样：托管省事，但牺牲可移植性和可审计性。需要跨厂商降级、需要审计的平台，通常仍然自己做，或者两种都支持、按模型选择。</p>
+</div>
+<div class="qa-wrap">
+<div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
+<details class="qa"><summary>对话超过上下文窗口了，怎么办？</summary><div class="ans">
+<ul>
+<li>先治源头：工具输出截断、大文件分段读、搜索交给子 agent。</li>
+<li>再压缩：阈值 = 窗口 − 回复预留；保留最近 N token；结构化摘要；不在工具结果处切分。</li>
+<li>原始记录不删，便于审计和回溯。</li>
+<li>最后一道保护：溢出错误时压缩后重试一次。</li>
+<li>点出代价：丢细节、摘要成本、缓存失效，阈值不能太激进。</li>
+</ul>
+<div class="follow"><b>再深一步：</b>为什么不能在 toolResult 处切？→ 主流 API 要求每个 tool_result 都有对应的 tool_use 在前面，切开会导致请求被拒绝。</div>
+</div></details>
+<details class="qa"><summary>怎么估算上下文的 token 数？</summary><div class="ans">
+<ul>
+<li>精确：调厂商的计数接口或本地 tokenizer，慢且各家不同。</li>
+<li>实用：用最近一次响应里厂商报告的上下文总用量（输入、缓存读写，再加这条回复本身的输出）作为基数，加上之后新增内容的粗估（字符 ÷ 4）。pi 就是这么做的。</li>
+<li>中文字符与 token 的比例和英文不同，粗估要留余量，这也是 reserveTokens 的作用之一。</li>
+</ul>
+</div></details>
+</div>
+<div class="ahead"><b class="h">前瞻 · 本章</b><ul>
+<li><span class="cf sure">已有证据</span>窗口在变大，但长上下文的质量衰减被多项研究反复测到（Chroma 的 Context Rot 等），所以上下文仍要调度。</li>
+<li><span class="cf sure">已有证据</span>Anthropic、OpenAI 都已提供托管的压缩或清理旧结果。harness 多了一个选择：自己实现，或用厂商的并补上审计。</li>
+<li><span class="cf likely">作者判断</span>模型会被专门训练去适应压缩后的上下文、甚至自己决定何时压缩（已有厂商把“跨多个上下文窗口连续工作”作为模型卖点，学术界也在做学习型压缩）。到那时，pi 这种手写的切分规则会变薄。</li>
+<li><span class="cf open">有争议</span>“清空上下文 + 结构化交接”和“压缩”哪个更好。不同模型、不同任务结论不同，需要自己评测（第 9 章长任务）。</li>
+</ul>
+</div>
+<div class="selftest" data-quiz>
+<div class="qa-head"><span>自测</span><span class="score">2 题</span></div>
+<div>
+<div class="q" data-a="2"><div class="qt">1. 模型上下文由五个槽位拼成。增长最快、最需要控制的通常是哪一个？</div><div class="opts"><button class="opt">system prompt</button><button class="opt">工具列表</button><button class="opt">历史与工具结果</button></div><div class="why" hidden><span class="verdict"></span>每次工具调用都往里追加结果，所以截断、压缩、清旧结果、子 agent 主要都在管它。</div></div>
+<div class="q" data-a="1"><div class="qt">2. pi 压缩时为什么不在 toolResult 处切分？</div><div class="opts"><button class="opt">为了省 token</button><button class="opt">工具结果必须和它的调用在一起，否则请求会被拒绝</button><button class="opt">toolResult 不重要</button></div><div class="why" hidden><span class="verdict"></span>每个 tool_result 都要有对应的 tool_use 在前。</div></div>
+</div>
+</div>
+<label class="understood"><input type="checkbox" data-done="c5"> 我能讲清五种手段，以及 pi 压缩算法的切分规则</label>
 </section>
 
-<!-- 6 -->
 <section class="ch" id="c6" data-t="Prompt Caching" data-part="原理" data-imp="often">
-  <div class="eyebrow">第 6 章 <span class="imp often">重要</span></div>
-  <h2>Prompt Caching 与成本</h2>
-
-  <h3><span class="lv l1">基础</span>前缀缓存是什么</h3>
-  <div class="prose">
-  <p>主流厂商都支持<b>前缀缓存</b>：如果这次请求的开头和之前某次完全一致，这部分的计算（Transformer 的 KV cache）可以复用，价格通常只有正常输入的一小部分，首 token 延迟也明显下降。缓存有生存时间（TTL），过期就失效。</p>
-  <p>为什么只能缓存<b>前缀</b>：模型的注意力只回看前面的 token（第 2 章），所以开头那段算出的中间结果和后面写了什么无关，可以原样复用；但只要前面改了一个字，它后面的所有结果都要重算。“只追加、不改开头”这条设计约束，就是从这里来的。</p>
-  <p>agent 的历史不断追加，天然适合前缀缓存：第 N 轮请求的前缀就是第 N−1 轮的全部内容。长会话里，缓存往往是<b>最省钱的一项</b>。</p>
-  </div>
-  <details class="term" data-term="cache"><summary><b>Prompt caching</b><span class="st infra">已成标配</span><span class="one">从可选功能变成计费的默认维度，也变成 harness 设计的硬约束</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2024-08</time><span>Anthropic 推出 prompt caching（需显式标记缓存断点）；DeepSeek 推出基于硬盘的上下文缓存。</span></li>
-      <li><time>2024-10</time><span>OpenAI 推出自动前缀缓存，无需改代码。</span></li>
-      <li><time>2025</time><span>更长的 TTL 选项（如 1 小时）出现；Manus 公开说 KV 缓存命中率是生产 agent 最重要的单一指标。</span></li>
-      <li><time>2026-07</time><span>连 MCP 规范都为它让路：工具列表要求顺序确定，避免重连后工具顺序变化导致缓存失效（第 16 章）。</span></li>
-    </ul>
-    <p class="rel"><b>现状：</b>没人专门讨论它，是因为它已经是默认前提。新设计都要先回答“会不会破坏前缀”：工具增删、system prompt 改动、压缩、服务端上下文编辑都要算这笔账。</p>
-  </div></details>
-
-  <h3><span class="lv l2">进阶</span>怎么设计才能命中</h3>
-  <div class="prose">
-  <ul>
-    <li><b>稳定内容在前：</b>system prompt、工具定义放最前面，且不要放当前时间、随机 ID。</li>
-    <li><b>只追加不修改：</b>中途改动前面的任何一条消息、增删工具，之后的缓存全部失效。</li>
-    <li><b>压缩的隐性成本：</b>压缩替换了历史，之后的请求通常无法再复用旧历史的缓存，从摘要开始的部分一般要重新计算；system prompt、工具定义这些没变的开头仍可命中。实际命中范围还取决于缓存断点和有效期。</li>
-    <li><b>路由粘性：</b>同一会话的请求尽量发往同一厂商、同一区域、同一缓存键（会话 ID）。</li>
-    <li><b>屏蔽工具而不是删除工具：</b>某个阶段不想让模型用某些工具时，删掉它们的定义会改动前缀。Manus 的做法是工具定义保持不变，在解码时限制可选的工具（或用提示告诉模型当前不可用）。pi 用追加 system 消息表达工具变化，也是为了不改前缀。</li>
-    <li><b>工具顺序要确定：</b>工具列表每次序列化的顺序必须一样。从 Map 或远程服务拿到的工具列表要先排序。</li>
-  </ul>
-  </div>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">工具和提示词的变化用追加的增量消息表达，不改写开头，前缀缓存不失效。</span><span class="pf">coding-agent/docs/session-format.md · extensions.md</span></summary><div class="pb">
-    <ul>
-      <li>工具列表变化不重写首条 system 消息，而是追加一条带 <code>toolsAdded</code> / <code>toolsRemoved</code> 的 system 消息；prompt 变化追加 section 补丁。前缀因此保持不变。</li>
-      <li>文档明确写道：无法表达这种增量的厂商会收到一份完整检查点，“which can invalidate the cached prefix”。</li>
-    </ul>
-  </div></details>
-
-  <h3><span class="lv l3">深入</span>缓存预热：用期望收益做决策</h3>
-  <div class="prose">
-  <p>缓存会过期。如果用户思考了 6 分钟才回复，而缓存 TTL 是 5 分钟，下一次请求就要按全价重新计算整个前缀。一个思路是在快过期时发一个极小的请求“续期”，但续期本身也花钱。值不值得，要算期望收益。</p>
-  </div>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">按期望收益决定要不要给缓存续期：在 TTL 的 90% 处、预计能省 0.05 美元以上才发。</span><span class="pf">coding-agent/src/core/cache-warmer.ts</span></summary><div class="pb">
-    <div class="code"><div class="hd"><span>关键常量（原文）</span><span>cache-warmer.ts</span></div><pre><span class="c">/** A refresh is sent only when it is expected to save at least this many dollars. */</span>
+<div class="eyebrow">第 6 章 <span class="imp often">重要</span></div>
+<h2>Prompt Caching 与成本</h2>
+<h3><span class="lv l1">基础</span>前缀缓存是什么</h3>
+<div class="prose">
+<p>主流厂商都支持<b>前缀缓存</b>：如果这次请求的开头和之前某次完全一致，这部分的计算（Transformer 的 KV cache）可以复用，价格通常只有正常输入的一小部分，首 token 延迟也明显下降。缓存有生存时间（TTL），过期就失效。</p>
+<p>为什么只能缓存<b>前缀</b>：模型的注意力只回看前面的 token（第 2 章），所以开头那段算出的中间结果和后面写了什么无关，可以原样复用；但只要前面改了一个字，它后面的所有结果都要重算。“只追加、不改开头”这条设计约束，就是从这里来的。</p>
+<p>agent 的历史不断追加，天然适合前缀缓存：第 N 轮请求的前缀就是第 N−1 轮的全部内容。长会话里，缓存往往是<b>最省钱的一项</b>。</p>
+</div>
+<details class="term" data-term="cache"><summary><b>Prompt caching</b><span class="st infra">已成标配</span><span class="one">从可选功能变成计费的默认维度，也变成 harness 设计的硬约束</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2024-08</time><span>Anthropic 推出 prompt caching（需显式标记缓存断点）；DeepSeek 推出基于硬盘的上下文缓存。</span></li>
+<li><time>2024-10</time><span>OpenAI 推出自动前缀缓存，无需改代码。</span></li>
+<li><time>2025</time><span>更长的 TTL 选项（如 1 小时）出现；Manus 公开说 KV 缓存命中率是生产 agent 最重要的单一指标。</span></li>
+<li><time>2026-07</time><span>连 MCP 规范都为它让路：工具列表要求顺序确定，避免重连后工具顺序变化导致缓存失效（第 16 章）。</span></li>
+</ul>
+<p class="rel"><b>现状：</b>没人专门讨论它，是因为它已经是默认前提。新设计都要先回答“会不会破坏前缀”：工具增删、system prompt 改动、压缩、服务端上下文编辑都要算这笔账。</p>
+</div></details>
+<h3><span class="lv l2">进阶</span>怎么设计才能命中</h3>
+<div class="prose">
+<ul>
+<li><b>稳定内容在前：</b>system prompt、工具定义放最前面，且不要放当前时间、随机 ID。</li>
+<li><b>只追加不修改：</b>中途改动前面的任何一条消息、增删工具，之后的缓存全部失效。</li>
+<li><b>压缩的隐性成本：</b>压缩替换了历史，之后的请求通常无法再复用旧历史的缓存，从摘要开始的部分一般要重新计算；system prompt、工具定义这些没变的开头仍可命中。实际命中范围还取决于缓存断点和有效期。</li>
+<li><b>路由粘性：</b>同一会话的请求尽量发往同一厂商、同一区域、同一缓存键（会话 ID）。</li>
+<li><b>屏蔽工具而不是删除工具：</b>某个阶段不想让模型用某些工具时，删掉它们的定义会改动前缀。Manus 的做法是工具定义保持不变，在解码时限制可选的工具（或用提示告诉模型当前不可用）。pi 用追加 system 消息表达工具变化，也是为了不改前缀。</li>
+<li><b>工具顺序要确定：</b>工具列表每次序列化的顺序必须一样。从 Map 或远程服务拿到的工具列表要先排序。</li>
+</ul>
+</div>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">工具和提示词的变化用追加的增量消息表达，不改写开头，前缀缓存不失效。</span><span class="pf">coding-agent/docs/session-format.md · extensions.md</span></summary><div class="pb">
+<ul>
+<li>工具列表变化不重写首条 system 消息，而是追加一条带 <code>toolsAdded</code> / <code>toolsRemoved</code> 的 system 消息；prompt 变化追加 section 补丁。前缀因此保持不变。</li>
+<li>文档明确写道：无法表达这种增量的厂商会收到一份完整检查点，“which can invalidate the cached prefix”。</li>
+</ul>
+</div></details>
+<h3><span class="lv l3">深入</span>缓存预热：用期望收益做决策</h3>
+<div class="prose">
+<p>缓存会过期。如果用户思考了 6 分钟才回复，而缓存 TTL 是 5 分钟，下一次请求就要按全价重新计算整个前缀。一个思路是在快过期时发一个极小的请求“续期”，但续期本身也花钱。值不值得，要算期望收益。</p>
+</div>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">按期望收益决定要不要给缓存续期：在 TTL 的 90% 处、预计能省 0.05 美元以上才发。</span><span class="pf">coding-agent/src/core/cache-warmer.ts</span></summary><div class="pb">
+<div class="code"><div class="hd"><span>关键常量（原文）</span><span>cache-warmer.ts</span></div><pre><span class="c">/** A refresh is sent only when it is expected to save at least this many dollars. */</span>
 <span class="k">const</span> CACHE_WARMING_MINIMUM_EXPECTED_SAVINGS = 0.05;
 <span class="c">/** Chance that a real request arrives before the cache entry expires while the agent sits idle.
  *  Measured from our own usage; per-session estimates were not better than this constant. */</span>
 <span class="k">const</span> IDLE_CONTINUATION_PROBABILITY = 0.15;
 
 <span class="c">/** Refresh at 90% of the TTL while preserving at least ten seconds of margin. */</span>
-<span class="k">export function</span> getCacheWarmingDelayMs(ttlMs: number) {
-  <span class="k">if</span> (ttlMs &lt;= 10_000) <span class="k">return</span> undefined;
+<span class="k">export</span> <span class="k">function</span> getCacheWarmingDelayMs(ttlMs: number) {
+  <span class="k">if</span> (ttlMs &lt;= 10_000) <span class="k">return</span> <span class="k">undefined</span>;
   <span class="k">return</span> Math.max(1, Math.floor(Math.min(ttlMs * 0.9, ttlMs - 10_000)));
 }</pre></div>
-    <ul>
-      <li>在 TTL 的 90% 处续期，并至少留 10 秒余量。</li>
-      <li>只有预估能省下至少 0.05 美元才发续期请求；续期的用量计入会话费用，但不进入模型上下文。</li>
-      <li>空闲时“用户会继续”的概率取常量 0.15，注释说这是从自己的使用数据里测出来的，按会话单独估计并没有更准。<b>用数据定参数、并记录为什么不用更复杂的方案</b>，这是很好的工程习惯。</li>
-      <li>还有一个细节：某些模型的“思考预算”由 max_tokens 推导，而缓存键包含它；用 1 个 token 的请求续期会改变缓存键，等于白续期。pi 对这种情况直接判定不可续期（<code>isReplayable</code>）。</li>
-    </ul>
-  </div></details>
-  <div class="java">
-    <div class="tag">成本估算练习</div>
-    <p>一个 40 turn 的任务，平均每次请求 60k token 输入。不缓存：总输入 2.4M token。如果每轮只有约 3k 是新增内容、其余都命中缓存，且缓存读取价格按正常输入的一成计算，等效输入约为 40 × (3k + 57k × 0.1) ≈ 0.35M，降到原来的约七分之一。（具体价格以各厂商定价为准。）</p>
-  </div>
-
-  <div class="qa-wrap">
-    <div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
-    <details class="qa"><summary>Prompt caching 的原理？怎么提高命中率？</summary><div class="ans">
-      <ul>
-        <li>原理：缓存请求前缀的 KV 计算结果，前缀完全一致才命中，有 TTL。</li>
-        <li>设计：稳定内容在前；历史只追加；不在前缀放时间戳；工具集变化用增量表达；会话粘性路由。</li>
-        <li>监控：缓存命中率是关键的过程指标，命中率突降往往意味着有人改动了前缀。但它不是目标本身：命中率很高，也可能只是每轮都在重发用不上的上下文。</li>
-      </ul>
-      <div class="follow"><b>再深一步：</b>用户长时间不回复导致缓存过期怎么办？→ 按期望收益决定是否预热：P(继续) × 节省的费用 &gt; 续期成本才续。pi 的实现可以作为例子。</div>
-    </div></details>
-    <details class="qa"><summary>如何降低 agent 的总成本？</summary><div class="ans">
-      <ul>
-        <li>先度量：目标指标是<b>每个合格完成的任务花了多少钱</b>（失败、返工的花费也算进去）；过程指标是每任务 token、turn 数、缓存命中率。</li>
-        <li>前缀缓存（通常收益最大）。</li>
-        <li>减少输入：截断、渐进披露、压缩、子 agent。</li>
-        <li>模型路由：分类、摘要交给小模型。</li>
-        <li>减少 turn：更好的工具和错误信息；可并行的调用一次发出。</li>
-        <li>每项改动都跑评测，确认成功率没降。</li>
-      </ul>
-    </div></details>
-  </div>
-  <div class="ahead"><b class="h">前瞻 · 本章</b><ul>
-    <li><span class="cf sure">已有证据</span>长会话里，前缀缓存是影响成本最大的因素之一（Manus 称命中率是生产 agent 最重要的单一指标）。但它是过程指标，更接近目标的是完成一个合格任务的总成本：缩短无用上下文可能让命中率下降，总成本却更低。</li>
-    <li><span class="cf sure">已有证据</span>“不要改前缀”已经出现在多处设计里：厂商 API、MCP 规范、工具按需加载（被搜到的工具定义出现在对话后部，而不是改动开头的工具列表）都在照顾它。</li>
-    <li><span class="cf likely">作者判断</span>缓存会提供更多显式控制（更长 TTL、主动预热、跨会话共享前缀）。pi 的“按期望收益预热”这类逻辑可能部分转到厂商那边。</li>
-  </ul></div>
-  <label class="understood"><input type="checkbox" data-done="c6"> 我能设计缓存友好的上下文，并算清一笔成本账</label>
+<ul>
+<li>在 TTL 的 90% 处续期，并至少留 10 秒余量。</li>
+<li>只有预估能省下至少 0.05 美元才发续期请求；续期的用量计入会话费用，但不进入模型上下文。</li>
+<li>空闲时“用户会继续”的概率取常量 0.15，注释说这是从自己的使用数据里测出来的，按会话单独估计并没有更准。<b>用数据定参数、并记录为什么不用更复杂的方案</b>，这是很好的工程习惯。</li>
+<li>还有一个细节：某些模型的“思考预算”由 max_tokens 推导，而缓存键包含它；用 1 个 token 的请求续期会改变缓存键，等于白续期。pi 对这种情况直接判定不可续期（<code>isReplayable</code>）。</li>
+</ul>
+</div></details>
+<div class="analogy"><div class="tag">成本估算练习</div><p>一个 40 turn 的任务，平均每次请求 60k token 输入。不缓存：总输入 2.4M token。如果每轮只有约 3k 是新增内容、其余都命中缓存，且缓存读取价格按正常输入的一成计算，等效输入约为 40 × (3k + 57k × 0.1) ≈ 0.35M，降到原来的约七分之一。（具体价格以各厂商定价为准。）</p>
+</div>
+<div class="qa-wrap">
+<div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
+<details class="qa"><summary>Prompt caching 的原理？怎么提高命中率？</summary><div class="ans">
+<ul>
+<li>原理：缓存请求前缀的 KV 计算结果，前缀完全一致才命中，有 TTL。</li>
+<li>设计：稳定内容在前；历史只追加；不在前缀放时间戳；工具集变化用增量表达；会话粘性路由。</li>
+<li>监控：缓存命中率是关键的过程指标，命中率突降往往意味着有人改动了前缀。但它不是目标本身：命中率很高，也可能只是每轮都在重发用不上的上下文。</li>
+</ul>
+<div class="follow"><b>再深一步：</b>用户长时间不回复导致缓存过期怎么办？→ 按期望收益决定是否预热：P(继续) × 节省的费用 &gt; 续期成本才续。pi 的实现可以作为例子。</div>
+</div></details>
+<details class="qa"><summary>如何降低 agent 的总成本？</summary><div class="ans">
+<ul>
+<li>先度量：目标指标是<b>每个合格完成的任务花了多少钱</b>（失败、返工的花费也算进去）；过程指标是每任务 token、turn 数、缓存命中率。</li>
+<li>前缀缓存（通常收益最大）。</li>
+<li>减少输入：截断、渐进披露、压缩、子 agent。</li>
+<li>模型路由：分类、摘要交给小模型。</li>
+<li>减少 turn：更好的工具和错误信息；可并行的调用一次发出。</li>
+<li>每项改动都跑评测，确认成功率没降。</li>
+</ul>
+</div></details>
+</div>
+<div class="ahead"><b class="h">前瞻 · 本章</b><ul>
+<li><span class="cf sure">已有证据</span>长会话里，前缀缓存是影响成本最大的因素之一（Manus 称命中率是生产 agent 最重要的单一指标）。但它是过程指标，更接近目标的是完成一个合格任务的总成本：缩短无用上下文可能让命中率下降，总成本却更低。</li>
+<li><span class="cf sure">已有证据</span>“不要改前缀”已经出现在多处设计里：厂商 API、MCP 规范、工具按需加载（被搜到的工具定义出现在对话后部，而不是改动开头的工具列表）都在照顾它。</li>
+<li><span class="cf likely">作者判断</span>缓存会提供更多显式控制（更长 TTL、主动预热、跨会话共享前缀）。pi 的“按期望收益预热”这类逻辑可能部分转到厂商那边。</li>
+</ul>
+</div>
+<div class="selftest" data-quiz>
+<div class="qa-head"><span>自测</span><span class="score">3 题</span></div>
+<div>
+<div class="q" data-a="1"><div class="qt">1. 为什么 prompt caching 只能缓存前缀？</div><div class="opts"><button class="opt">厂商的计费规则规定的</button><button class="opt">注意力只回看前面的 token，开头算出的结果和后面写了什么无关</button><button class="opt">因为前缀通常最短</button></div><div class="why" hidden><span class="verdict"></span>改了前面任何一个字，它后面的结果都要重算，所以“只追加、不改开头”。</div></div>
+<div class="q" data-a="0"><div class="qt">2. 哪种做法会破坏 prompt caching？</div><div class="opts"><button class="opt">system prompt 开头放当前时间</button><button class="opt">历史只追加</button><button class="opt">工具变化以增量消息追加</button></div><div class="why" hidden><span class="verdict"></span>前缀一致才命中。</div></div>
+<div class="q" data-a="1"><div class="qt">3. 换了更短的上下文策略后，缓存命中率从 90% 降到 70%，但每个合格完成的任务花费下降了。该怎么看？</div><div class="opts"><button class="opt">回滚，命中率是第一指标</button><button class="opt">以每个合格任务的总成本为准，命中率只是过程指标</button><button class="opt">两个指标都不重要</button></div><div class="why" hidden><span class="verdict"></span>命中率高也可能只是每轮都在重发用不上的上下文。</div></div>
+</div>
+</div>
+<label class="understood"><input type="checkbox" data-done="c6"> 我能设计缓存友好的上下文，并算清一笔成本账</label>
 </section>
 
-<!-- 7 -->
 <section class="ch" id="c7" data-t="工具设计与实现" data-part="原理" data-imp="often">
-  <div class="eyebrow">第 7 章 <span class="imp often">重要</span></div>
-  <h2>工具设计与实现</h2>
-
-  <h3><span class="lv l1">基础</span>设计原则（ACI）</h3>
-  <div class="prose">
-  <p>工具是模型的 API。SWE-agent 论文（2024）把它叫作 ACI（Agent-Computer Interface），Anthropic 在《Building Effective Agents》里沿用了这个说法。它值得像设计对外 API 一样用心：</p>
-  <ul>
-    <li><b>少而通用：</b>coding agent 有 read、write、edit、bash 就能做几乎所有事。工具越多越容易选错，定义本身也占上下文。</li>
-    <li><b>描述写给模型：</b>做什么、什么时候用、什么时候不用、参数含义。</li>
-    <li><b>错误是反馈：</b>告诉模型错在哪、怎么改。</li>
-    <li><b>防呆：</b>让模型不容易犯错。</li>
-    <li><b>控制输出体积：</b>默认截断，告诉模型完整输出在哪。</li>
-    <li><b>标注副作用：</b>只读、破坏性、幂等、是否与外部世界交互，供权限系统参考。</li>
-  </ul>
-  </div>
-  <div class="tbl"><table>
-    <thead><tr><th>pi 内置工具</th><th>参数</th><th>默认启用</th></tr></thead>
-    <tbody>
-      <tr><td><code>read</code></td><td><code>path</code>, <code>offset?</code>, <code>limit?</code></td><td>是</td></tr>
-      <tr><td><code>bash</code></td><td><code>command</code>, <code>timeout?</code>（秒）</td><td>是</td></tr>
-      <tr><td><code>edit</code></td><td><code>path</code>, <code>edits: [{oldText, newText}]</code></td><td>是</td></tr>
-      <tr><td><code>write</code></td><td><code>path</code>, <code>content</code></td><td>是</td></tr>
-      <tr><td><code>grep</code> <code>find</code> <code>ls</code></td><td>…（grep、find 遵守 .gitignore；ls 不过滤）</td><td>否</td></tr>
-      <tr><td><code>powershell</code></td><td>…（仅原生 Windows）</td><td>否</td></tr>
-    </tbody>
-  </table></div>
-
-  <h3><span class="lv l2">进阶</span>edit：为什么用文本替换，怎么防呆</h3>
-  <div class="prose">
-  <p>用行号修改会遇到“行号漂移”：第一处修改增加了 3 行，第二处的行号就错了。用“旧文本 → 新文本”替换，位置由内容决定，不受影响。但它有两个新问题：模型复述的旧文本和文件不完全一致（空格、引号），以及旧文本在文件中出现多次。试试 pi 的处理方式：</p>
-  </div>
-  <div class="panel">
-    <div class="panel-title"><span>edit 匹配模拟</span><small>逻辑与报错文本取自 edit-diff.ts</small></div>
-    <div class="row" style="margin-top:10px" id="emCases"></div>
-    <div class="pb-out" id="emFile"></div>
-    <div class="status" id="emOut"></div>
-  </div>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">先精确匹配，再做归一化后的模糊匹配；出现多次就报错，要求给出能唯一定位的文本。</span><span class="pf">coding-agent/src/core/tools/edit-diff.ts · fuzzyFindText()</span></summary><div class="pb">
-    <ul>
-      <li>先精确匹配；找不到再做<b>模糊匹配</b>：Unicode NFKC 归一化、去掉每行行尾空白、弯引号转直引号、各种破折号转 <code>-</code>、特殊空格转普通空格。</li>
-      <li>出现多次就报错，并明确要求“提供更多上下文使其唯一”。</li>
-      <li>多处修改放在一次调用的 <code>edits[]</code> 里，每个 oldText 都对<b>原始文件</b>匹配，不能重叠，然后一次性应用。</li>
-      <li>替换后内容没变也报错：这通常意味着特殊字符问题，提示模型检查。</li>
-    </ul>
-  </div></details>
-  <div class="prose">
-  <p><b>编辑格式和模型是绑定的。</b>厂商会在自家 harness 的工具上做强化学习，于是模型对某种编辑格式特别熟练：OpenAI 建议 GPT 系列和 Codex 模型使用 <code>apply_patch</code>（一种类 diff 的补丁格式），Anthropic 的模型则针对 <code>str_replace</code> 式的文本编辑工具训练过。同一个模型换一种它不熟悉的编辑格式，出错率会明显上升。</p>
-  <p>所以支持多厂商的 harness 要考虑<b>按模型选工具格式</b>，而不是全部用一种。这是第 2 章“harness 也是训练环境”带来的直接后果。</p>
-  </div>
-
-  <h3><span class="lv l2">进阶</span>动作接口的精度光谱</h3>
-  <div class="prose">
-  <p>同一件事，可以通过精度不同的几种接口去做。比如“把图表导出成 PNG”：</p>
-  </div>
-  <div class="tbl"><table>
-    <thead><tr><th>接口</th><th>模型做什么</th><th>优点</th><th>代价</th></tr></thead>
-    <tbody>
-      <tr><td>GUI（computer use）</td><td>看截图 → 点坐标 → 再看截图</td><td>任何有界面的软件都能用</td><td>慢、费 token（每步一张图）、容易点错</td></tr>
-      <tr><td>CLI</td><td><code>export --format png --output fig.png</code></td><td>精确、可组合、模型训练时见过大量用法</td><td>软件得有命令行；要读退出码和错误输出</td></tr>
-      <tr><td>API / 函数调用</td><td>输出带 JSON 参数的调用</td><td>参数可校验，可做权限标注</td><td>要有人先写好工具定义</td></tr>
-      <tr><td>代码（code mode）</td><td>写一段脚本批量调用</td><td>中间结果不进上下文</td><td>需要沙箱执行代码（第 16 章）</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose">
-  <p>原则：<b>能用更精确的接口，就不用更模糊的</b>。GUI 留给没有任何接口的软件。也有项目反过来，给只有界面的软件自动生成一层命令行，让 agent 能走 CLI。无论走哪种接口，最后都要检查结果：退出码、输出、生成的文件，或者再截一张图确认。</p>
-  </div>
-  <details class="term" data-term="computeruse"><summary><b>Computer use / GUI agent</b><span class="st debate">仍在演变</span><span class="one">能看屏幕、点鼠标的 agent；有接口时优先走接口</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2024-10</time><span>Anthropic 推出 computer use：模型看截图，输出鼠标和键盘动作。</span></li>
-      <li><time>2025-01</time><span>OpenAI 推出 Operator，在浏览器里替用户操作网页。</span></li>
-      <li><time>2025–26</time><span>OSWorld 等基准用来衡量这类能力；coding agent 则普遍选择 CLI 和浏览器自动化脚本，而不是像素级点击。</span></li>
-    </ul>
-    <p class="rel"><b>和其他词的关系：</b>它和 function calling、CLI 回答的是同一个问题：输出怎么变成动作。区别只在接口精度。点击类操作同样需要“确认后再执行”这类护栏（第 13 章）。</p>
-  </div></details>
-
-  <h3><span class="lv l3">深入</span>截断策略、进程树与并发写</h3>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">读文件保留开头、命令输出保留结尾；超时杀整个进程树；同一文件的修改排队执行。</span><span class="pf">tools/truncate.ts · tools/bash.ts · tools/file-mutation-queue.ts</span></summary><div class="pb">
-    <ul>
-      <li><b>截断方向不同：</b>上限是 2000 行或 50KB，先到为准，一般按整行截断（例外：bash 输出的最后一行本身就超过字节上限时，只保留这一行的末尾，并标明是半行）。read 用 <code>truncateHead</code>（保留开头，模型可以用 offset 接着读）；bash 用 <code>truncateTail</code>（保留结尾，因为编译错误、测试失败、退出信息都在最后）。bash 被截断时，完整输出写入临时文件，结果里告诉模型路径和起始行号。</li>
-      <li><b>杀进程树：</b>bash 在非 Windows 上以 <code>detached</code> 启动成独立进程组；超时或用户中止时调用 <code>killProcessTree(pid)</code>，连同所有子进程一起结束。超时没有默认值，由模型按需传入。</li>
-      <li><b>同文件串行、不同文件并行：</b>并行执行的两个 edit 如果改同一个文件，会出现“读-改-写”竞争，后写的覆盖先写的。<code>withFileMutationQueue</code> 按文件的 <b>realpath</b>（解析符号链接，防止两条路径指向同一文件）维护一条 Promise 链，同一文件的操作排队，队列清空后删除 key 防止内存泄漏。</li>
-    </ul>
-  </div></details>
-  <div class="code"><div class="hd"><span>同样的思路，用 Java 实现</span><span>示意</span></div><pre><span class="k">final class</span> FileMutationQueue {
-    <span class="k">private final</span> ConcurrentHashMap&lt;Path, ReentrantLock&gt; locks = <span class="k">new</span> ConcurrentHashMap&lt;&gt;();
+<div class="eyebrow">第 7 章 <span class="imp often">重要</span></div>
+<h2>工具设计与实现</h2>
+<h3><span class="lv l1">基础</span>设计原则（ACI）</h3>
+<div class="prose">
+<p>工具是模型的 API。SWE-agent 论文（2024）把它叫作 ACI（Agent-Computer Interface），Anthropic 在《Building Effective Agents》里沿用了这个说法。它值得像设计对外 API 一样用心：</p>
+<ul>
+<li><b>少而通用：</b>coding agent 有 read、write、edit、bash 就能做几乎所有事。工具越多越容易选错，定义本身也占上下文。</li>
+<li><b>描述写给模型：</b>做什么、什么时候用、什么时候不用、参数含义。</li>
+<li><b>错误是反馈：</b>告诉模型错在哪、怎么改。</li>
+<li><b>防呆：</b>让模型不容易犯错。</li>
+<li><b>控制输出体积：</b>默认截断，告诉模型完整输出在哪。</li>
+<li><b>标注副作用：</b>只读、破坏性、幂等、是否与外部世界交互，供权限系统参考。</li>
+</ul>
+</div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>pi 内置工具</th>
+<th>参数</th>
+<th>默认启用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>read</code></td>
+<td><code>path</code>, <code>offset?</code>, <code>limit?</code></td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>bash</code></td>
+<td><code>command</code>, <code>timeout?</code>（秒）</td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>edit</code></td>
+<td><code>path</code>, <code>edits: [{oldText, newText}]</code></td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>write</code></td>
+<td><code>path</code>, <code>content</code></td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>grep</code> <code>find</code> <code>ls</code></td>
+<td>…（grep、find 遵守 .gitignore；ls 不过滤）</td>
+<td>否</td>
+</tr>
+<tr>
+<td><code>powershell</code></td>
+<td>…（仅原生 Windows）</td>
+<td>否</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3><span class="lv l2">进阶</span>edit：为什么用文本替换，怎么防呆</h3>
+<div class="prose">
+<p>用行号修改会遇到“行号漂移”：第一处修改增加了 3 行，第二处的行号就错了。用“旧文本 → 新文本”替换，位置由内容决定，不受影响。但它有两个新问题：模型复述的旧文本和文件不完全一致（空格、引号），以及旧文本在文件中出现多次。试试 pi 的处理方式：</p>
+</div>
+<div class="panel">
+  <div class="panel-title"><span>edit 匹配模拟</span><small>逻辑与报错文本取自 edit-diff.ts</small></div>
+  <div class="row" style="margin-top:10px" id="emCases"></div>
+  <div class="pb-out" id="emFile"></div>
+  <div class="status" id="emOut"></div>
+</div>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">先精确匹配，再做归一化后的模糊匹配；出现多次就报错，要求给出能唯一定位的文本。</span><span class="pf">coding-agent/src/core/tools/edit-diff.ts · fuzzyFindText()</span></summary><div class="pb">
+<ul>
+<li>先精确匹配；找不到再做<b>模糊匹配</b>：Unicode NFKC 归一化、去掉每行行尾空白、弯引号转直引号、各种破折号转 <code>-</code>、特殊空格转普通空格。</li>
+<li>出现多次就报错，并明确要求“提供更多上下文使其唯一”。</li>
+<li>多处修改放在一次调用的 <code>edits[]</code> 里，每个 oldText 都对<b>原始文件</b>匹配，不能重叠，然后一次性应用。</li>
+<li>替换后内容没变也报错：这通常意味着特殊字符问题，提示模型检查。</li>
+</ul>
+</div></details>
+<div class="prose">
+<p><b>编辑格式和模型是绑定的。</b>厂商会在自家 harness 的工具上做强化学习，于是模型对某种编辑格式特别熟练：OpenAI 建议 GPT 系列和 Codex 模型使用 <code>apply_patch</code>（一种类 diff 的补丁格式），Anthropic 的模型则针对 <code>str_replace</code> 式的文本编辑工具训练过。同一个模型换一种它不熟悉的编辑格式，出错率会明显上升。</p>
+<p>所以支持多厂商的 harness 要考虑<b>按模型选工具格式</b>，而不是全部用一种。这是第 2 章“harness 也是训练环境”带来的直接后果。</p>
+</div>
+<h3><span class="lv l2">进阶</span>动作接口的精度光谱</h3>
+<div class="prose">
+<p>同一件事，可以通过精度不同的几种接口去做。比如“把图表导出成 PNG”：</p>
+</div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>模型做什么</th>
+<th>优点</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GUI（computer use）</td>
+<td>看截图 → 点坐标 → 再看截图</td>
+<td>任何有界面的软件都能用</td>
+<td>慢、费 token（每步一张图）、容易点错</td>
+</tr>
+<tr>
+<td>CLI</td>
+<td><code>export --format png --output fig.png</code></td>
+<td>精确、可组合、模型训练时见过大量用法</td>
+<td>软件得有命令行；要读退出码和错误输出</td>
+</tr>
+<tr>
+<td>API / 函数调用</td>
+<td>输出带 JSON 参数的调用</td>
+<td>参数可校验，可做权限标注</td>
+<td>要有人先写好工具定义</td>
+</tr>
+<tr>
+<td>代码（code mode）</td>
+<td>写一段脚本批量调用</td>
+<td>中间结果不进上下文</td>
+<td>需要沙箱执行代码（第 16 章）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>原则：<b>能用更精确的接口，就不用更模糊的</b>。GUI 留给没有任何接口的软件。也有项目反过来，给只有界面的软件自动生成一层命令行，让 agent 能走 CLI。无论走哪种接口，最后都要检查结果：退出码、输出、生成的文件，或者再截一张图确认。</p>
+</div>
+<details class="term" data-term="computeruse"><summary><b>Computer use / GUI agent</b><span class="st debate">仍在演变</span><span class="one">能看屏幕、点鼠标的 agent；有接口时优先走接口</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2024-10</time><span>Anthropic 推出 computer use：模型看截图，输出鼠标和键盘动作。</span></li>
+<li><time>2025-01</time><span>OpenAI 推出 Operator，在浏览器里替用户操作网页。</span></li>
+<li><time>2025–26</time><span>OSWorld 等基准用来衡量这类能力；coding agent 则普遍选择 CLI 和浏览器自动化脚本，而不是像素级点击。</span></li>
+</ul>
+<p class="rel"><b>和其他词的关系：</b>它和 function calling、CLI 回答的是同一个问题：输出怎么变成动作。区别只在接口精度。点击类操作同样需要“确认后再执行”这类护栏（第 13 章）。</p>
+</div></details>
+<h3><span class="lv l3">深入</span>截断策略、进程树与并发写</h3>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">读文件保留开头、命令输出保留结尾；超时杀整个进程树；同一文件的修改排队执行。</span><span class="pf">tools/truncate.ts · tools/bash.ts · tools/file-mutation-queue.ts</span></summary><div class="pb">
+<ul>
+<li><b>截断方向不同：</b>上限是 2000 行或 50KB，先到为准，一般按整行截断（例外：bash 输出的最后一行本身就超过字节上限时，只保留这一行的末尾，并标明是半行）。read 用 <code>truncateHead</code>（保留开头，模型可以用 offset 接着读）；bash 用 <code>truncateTail</code>（保留结尾，因为编译错误、测试失败、退出信息都在最后）。bash 被截断时，完整输出写入临时文件，结果里告诉模型路径和起始行号。</li>
+<li><b>杀进程树：</b>bash 在非 Windows 上以 <code>detached</code> 启动成独立进程组；超时或用户中止时调用 <code>killProcessTree(pid)</code>，连同所有子进程一起结束。超时没有默认值，由模型按需传入。</li>
+<li><b>同文件串行、不同文件并行：</b>并行执行的两个 edit 如果改同一个文件，会出现“读-改-写”竞争，后写的覆盖先写的。<code>withFileMutationQueue</code> 按文件的 <b>realpath</b>（解析符号链接，防止两条路径指向同一文件）维护一条 Promise 链，同一文件的操作排队，队列清空后删除 key 防止内存泄漏。</li>
+</ul>
+</div></details>
+<div class="code"><div class="hd"><span>同样的思路，用 Java 实现</span><span>示意</span></div><pre><span class="k">final</span> <span class="k">class</span> FileMutationQueue {
+    <span class="k">private</span> <span class="k">final</span> ConcurrentHashMap&lt;Path, ReentrantLock&gt; locks = <span class="k">new</span> ConcurrentHashMap&lt;&gt;();
 
     &lt;T&gt; T withLock(Path file, Callable&lt;T&gt; op) <span class="k">throws</span> Exception {
         Path key = realPathOrAbsolute(file);                <span class="c">// 符号链接指向同一文件时必须用同一把锁</span>
@@ -986,327 +1253,530 @@
         }
     }
 }</pre></div>
-  <p class="small">注意 Java 版的清理有一个竞态：remove 之后、另一个线程刚好 computeIfAbsent 拿到新锁，与仍持有旧锁引用的线程并发。生产代码可以用引用计数，或用 Guava 的 <code>Striped&lt;Lock&gt;</code> 固定数量的锁来避免。</p>
-
-  <div class="qa-wrap">
-    <div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
-    <details class="qa"><summary>让 agent 修改文件，用行号还是文本替换？各有什么问题？</summary><div class="ans">
-      <ul>
-        <li>行号：多处修改后漂移；模型数行号容易错。</li>
-        <li>文本替换：位置稳定；但要处理空白和引号差异（模糊匹配）、多次出现（要求唯一）、多处修改（基于原文件匹配、不可重叠、一次应用）。</li>
-        <li>整文件重写：最简单，但费 token 且容易误删内容，只适合新文件。</li>
-      </ul>
-    </div></details>
-    <details class="qa"><summary>工具输出很大（比如构建日志）怎么处理？</summary><div class="ans">
-      <ul>
-        <li>按行数和字节双上限截断，尽量按整行截；单行本身超长时才截半行，并明确标出。</li>
-        <li>截断方向按场景选：日志保留尾部，文件保留头部。</li>
-        <li>完整内容落临时文件，结果里告诉模型路径和截断位置，需要时再读。</li>
-      </ul>
-    </div></details>
-    <details class="qa"><summary>并行工具调用改同一个文件会怎样？怎么解决？</summary><div class="ans">
-      <ul>
-        <li>两个调用都读到旧内容，各自修改后写回，后写的覆盖先写的，丢失更新。</li>
-        <li>按文件真实路径加锁，锁住完整的读-改-写；不同文件仍然并行。</li>
-        <li>或者把有共享状态的工具声明为串行执行。</li>
-      </ul>
-    </div></details>
-  </div>
-  <div class="ahead"><b class="h">前瞻 · 本章</b><ul>
-    <li><span class="cf sure">已有证据</span>Claude Code、Codex CLI、pi 等主流 coding agent 都以“少量通用工具 + bash”为主。专用工具的价值主要集中在两类：模型训练时见过的格式（如编辑工具），以及需要权限控制、结构化输出的操作。</li>
-    <li><span class="cf sure">已有证据</span>工具数量多时，已有厂商 API 和 harness（包括 pi）支持按需加载工具定义，不必全量放进上下文（第 16 章）。</li>
-    <li><span class="cf likely">作者判断</span>工具格式和模型的绑定会加深。harness 的工具层会出现“按模型适配”的一层，类似 JDBC 驱动按数据库适配方言。</li>
-    <li><span class="cf likely">作者判断</span>防呆逻辑（模糊匹配、唯一性检查）会变薄：模型复述旧文本越来越准。但截断、进程树、并发写这些“替模型做事”的逻辑不会变。</li>
-  </ul></div>
-  <label class="understood"><input type="checkbox" data-done="c7"> 我理解 edit 的匹配规则、两种截断方向和并发写保护</label>
+<p class="small">注意 Java 版的清理有一个竞态：remove 之后、另一个线程刚好 computeIfAbsent 拿到新锁，与仍持有旧锁引用的线程并发。生产代码可以用引用计数，或用 Guava 的 <code>Striped&lt;Lock&gt;</code> 固定数量的锁来避免。</p>
+<div class="qa-wrap">
+<div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
+<details class="qa"><summary>让 agent 修改文件，用行号还是文本替换？各有什么问题？</summary><div class="ans">
+<ul>
+<li>行号：多处修改后漂移；模型数行号容易错。</li>
+<li>文本替换：位置稳定；但要处理空白和引号差异（模糊匹配）、多次出现（要求唯一）、多处修改（基于原文件匹配、不可重叠、一次应用）。</li>
+<li>整文件重写：最简单，但费 token 且容易误删内容，只适合新文件。</li>
+</ul>
+</div></details>
+<details class="qa"><summary>工具输出很大（比如构建日志）怎么处理？</summary><div class="ans">
+<ul>
+<li>按行数和字节双上限截断，尽量按整行截；单行本身超长时才截半行，并明确标出。</li>
+<li>截断方向按场景选：日志保留尾部，文件保留头部。</li>
+<li>完整内容落临时文件，结果里告诉模型路径和截断位置，需要时再读。</li>
+</ul>
+</div></details>
+<details class="qa"><summary>并行工具调用改同一个文件会怎样？怎么解决？</summary><div class="ans">
+<ul>
+<li>两个调用都读到旧内容，各自修改后写回，后写的覆盖先写的，丢失更新。</li>
+<li>按文件真实路径加锁，锁住完整的读-改-写；不同文件仍然并行。</li>
+<li>或者把有共享状态的工具声明为串行执行。</li>
+</ul>
+</div></details>
+</div>
+<div class="ahead"><b class="h">前瞻 · 本章</b><ul>
+<li><span class="cf sure">已有证据</span>Claude Code、Codex CLI、pi 等主流 coding agent 都以“少量通用工具 + bash”为主。专用工具的价值主要集中在两类：模型训练时见过的格式（如编辑工具），以及需要权限控制、结构化输出的操作。</li>
+<li><span class="cf sure">已有证据</span>工具数量多时，已有厂商 API 和 harness（包括 pi）支持按需加载工具定义，不必全量放进上下文（第 16 章）。</li>
+<li><span class="cf likely">作者判断</span>工具格式和模型的绑定会加深。harness 的工具层会出现“按模型适配”的一层，类似 JDBC 驱动按数据库适配方言。</li>
+<li><span class="cf likely">作者判断</span>防呆逻辑（模糊匹配、唯一性检查）会变薄：模型复述旧文本越来越准。但截断、进程树、并发写这些“替模型做事”的逻辑不会变。</li>
+</ul>
+</div>
+<div class="selftest" data-quiz>
+<div class="qa-head"><span>自测</span><span class="score">3 题</span></div>
+<div>
+<div class="q" data-a="1"><div class="qt">1. bash 工具输出超限时，pi 保留哪一部分？</div><div class="opts"><button class="opt">开头</button><button class="opt">结尾</button><button class="opt">中间</button></div><div class="why" hidden><span class="verdict"></span>编译错误和测试失败信息在最后，所以 bash 用 truncateTail；read 则保留开头。</div></div>
+<div class="q" data-a="1"><div class="qt">2. 两个并行的 edit 改同一个文件，pi 怎么避免丢失更新？</div><div class="opts"><button class="opt">不处理</button><button class="opt">按文件 realpath 排队，同文件串行、不同文件并行</button><button class="opt">全部工具改为串行</button></div><div class="why" hidden><span class="verdict"></span>withFileMutationQueue 用 Promise 链实现每个文件一条队列。</div></div>
+<div class="q" data-a="2"><div class="qt">3. edit 的 oldText 在文件中出现 2 次，pi 会？</div><div class="opts"><button class="opt">替换第一处</button><button class="opt">全部替换</button><button class="opt">报错要求提供更多上下文使其唯一</button></div><div class="why" hidden><span class="verdict"></span>防止改错位置。</div></div>
+</div>
+</div>
+<label class="understood"><input type="checkbox" data-done="c7"> 我理解 edit 的匹配规则、两种截断方向和并发写保护</label>
 </section>
 
-<!-- 8 -->
 <section class="ch" id="c8" data-t="记忆与检索" data-part="原理" data-imp="often">
-  <div class="eyebrow">第 8 章 <span class="imp often">重要</span></div>
-  <h2>记忆与检索</h2>
-
-  <p class="lead">本章分两个单元。<b>单元 A · 规则、技能与记忆</b>：agent 自己的项目约定、做事方法和经验怎么存、怎么加载、怎么更新。<b>单元 B · 知识检索</b>：外部的大量文档怎么找到并放进上下文。最后用一张表把两边放在一起比较。</p>
-
-  <div class="eyebrow" style="margin-top:28px">单元 A · 规则、技能与记忆</div>
-  <h3><span class="lv l1">基础</span>三层记忆</h3>
-  <div class="tbl"><table>
-    <thead><tr><th>类型</th><th>是什么</th><th>典型实现</th></tr></thead>
-    <tbody>
-      <tr><td>工作记忆</td><td>当前上下文窗口里的内容</td><td>messages + 压缩</td></tr>
-      <tr><td>会话记忆</td><td>一次会话的完整记录，可以恢复和分支</td><td>只追加的事件日志（第 10 章）</td></tr>
-      <tr><td>长期记忆</td><td>跨会话的知识、偏好、项目约定</td><td>规则文件、笔记、数据库、向量库</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose"><p>按时间跨度看，会话记忆和长期记忆之间还夹着一层：<b>只属于这个任务、但要跨会话保留的进度</b>，比如交接摘要、todo 清单、功能清单。用户说“接着做我的作业”，靠的就是它。第 9 章的长时任务主要靠这一层。</p></div>
-
-  <h3><span class="lv l2">进阶</span>长期记忆怎么写</h3>
-  <div class="prose">
-  <p>长期记忆的写入比读取更难：</p>
-  <ul>
-    <li><b>谁来写：</b>模型自动写容易积累错误，人工确认又太慢。常见折中是模型提议、人确认，或只允许写入特定文件。</li>
-    <li><b>记忆污染：</b>被注入的恶意内容如果写进长期记忆，会影响之后所有会话。写入前要校验来源。</li>
-    <li><b>过期与冲突：</b>项目约定会变，记忆要能更新和失效。更正一条旧记录时，新记录要带上来源、更新时间和“取代了哪条”，否则两条矛盾的记录会并存，模型不知道信哪个。</li>
-    <li><b>存储方式不决定检索方式：</b>同一份文本笔记，可以用关键词搜（适合 ID、日期），也可以用向量搜（适合换了说法的问题），或者两者混合。先用文件存，检索方式以后可以换。</li>
-    <li><b>定期整理：</b>原始历史越积越多。有的 agent 会定期把历史对话压成几条持久的事实和偏好，写进记忆文件，原始记录留着备查。</li>
-  </ul>
-  </div>
-  <details class="term" data-term="memory"><summary><b>Agent memory</b><span class="st debate">仍在演变</span><span class="one">在 coding agent 里，从“向量库存对话”转向“文件 + 模型自己读写”</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2023-10</time><span>MemGPT 论文：借鉴操作系统的分页，把上下文当内存、外部存储当磁盘，由模型自己换入换出。后来发展成 Letta。</span></li>
-      <li><time>2024</time><span>ChatGPT 上线跨会话记忆；各类“记忆层”产品多用向量库存储和检索对话片段。</span></li>
-      <li><time>2025-09</time><span>Anthropic 推出 memory tool：记忆就是一个目录里的文件，模型用查看、创建、修改等操作自己管理。</span></li>
-      <li><time>2025–26</time><span>coding agent 普遍用 CLAUDE.md / AGENTS.md、skills、进度文件做长期记忆，全部是文件。</span></li>
-    </ul>
-    <p class="rel"><b>趋势：</b>文件胜出的原因很工程：人能直接读和改、能进 git、能审计、模型天然会用。向量库仍适合海量非结构化内容的召回。注意范围：这说的是 coding agent 这类能读写文件的场景；聊天产品的跨会话记忆多由厂商托管，存储和检索方式并不公开，不能一概而论。</p>
-  </div></details>
-
-  <h3><span class="lv l3">深入</span>pi 的规则文件与 skill：文件 + 渐进披露</h3>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">不建向量索引；规则文件逐级向上发现；skill 只放名字和描述，全文按需读取。</span><span class="pf">docs/configuration.md · core/skills.ts · formatSkillsForPrompt()</span></summary><div class="pb">
-    <ul>
-      <li><b>不建向量索引。</b>pi 让模型用 bash（rg、find）或可选的 grep / find 工具搜代码。</li>
-      <li><b>规则文件分层发现：</b>从 agent 目录（<code>~/.pi/agent</code>）、当前目录以及每一级父目录收集 <code>AGENTS.md</code>（或 <code>CLAUDE.md</code>），放进 system prompt 的 <code>project_context</code> 段。monorepo 里子目录可以有自己的规则。</li>
-      <li><b>skill 渐进披露：</b>启动时只把每个 skill 的名字、描述、文件路径放进 <code>&lt;available_skills&gt;</code>，并告诉模型“任务匹配时用 read 工具读取 skill 文件”。全文只在需要时才进上下文。</li>
-    </ul>
-  </div></details>
-  <details class="term" data-term="skills"><summary><b>Skills（Agent Skills）</b><span class="st hot">正流行</span><span class="one">2025 年 10 月出现，两个月成为开放标准，被认为“可能比 MCP 更重要”</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2025-10</time><span>Anthropic 推出 Skills：一个文件夹，里面一份带 name / description 头信息的 <code>SKILL.md</code>，加上可选的脚本和资料。只有描述常驻上下文，正文按需读取。</span></li>
-      <li><time>2025-10</time><span>Simon Willison 撰文认为它可能比 MCP 影响更大：简单到只是 Markdown，任何能读文件的 agent 都能用。</span></li>
-      <li><time>2025-12</time><span>规范以开放标准发布（agentskills.io），OpenAI Codex、VS Code 等很快支持。</span></li>
-      <li><time>2026</time><span>支持它的工具从十几个增长到数十个，也出现了技能市场和随之而来的供应链安全问题（第 13 章）。</span></li>
-    </ul>
-    <p class="rel"><b>和其他词的关系：</b>
-      <b>vs AGENTS.md：</b>规则文件每次都加载，讲“这个项目的约定”；skill 按需加载，讲“某类任务怎么做”。
-      <b>vs MCP：</b>MCP 解决“能连上什么系统”，skill 解决“该怎么做”；一个 skill 里可以写“用这个 CLI 或这个 MCP 工具完成某步”，二者是互补的（第 16 章）。
-      <b>vs 渐进披露：</b>skill 就是渐进披露这个思路的标准化包装。</p>
-  </div></details>
-
-  <div class="eyebrow" style="margin-top:28px">单元 B · 知识检索</div>
-  <h3><span class="lv l2">进阶</span>RAG vs Agentic Search</h3>
-  <div class="tbl"><table>
-    <thead><tr><th></th><th>经典 RAG（预建索引，请求前固定检索）</th><th>Agentic search（模型现场多轮搜原始文件）</th></tr></thead>
-    <tbody>
-      <tr><td>前期成本</td><td>切块、建索引（向量检索还要 embedding）、维护索引同步</td><td>几乎为零</td></tr>
-      <tr><td>查询成本</td><td>一次检索，便宜、快</td><td>多轮工具调用，慢、贵</td></tr>
-      <tr><td>准确性</td><td>取决于切块、检索和重排：向量检索擅长“说法不同、意思相近”，不擅长精确标识符；切块会切断上下文</td><td>精确字符串定位好，能顺着引用继续找；但也可能漏搜，取决于查询怎么写</td></tr>
-      <tr><td>新鲜度</td><td>依赖索引更新</td><td>直接读当前文件，天然最新</td></tr>
-      <tr><td>适合</td><td>海量文档、知识库问答</td><td>单个代码仓库、中等规模</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose"><p>二者可以结合：把检索包装成一个工具（<code>search_docs</code>），由模型决定查不查、查几次、换不换关键词，这叫 agentic RAG。RAG 自身的常见优化：混合检索（BM25 + 向量）、rerank、查询改写、按文档结构切块。</p></div>
-  <details class="term" data-term="rag"><summary><b>RAG</b><span class="st debate">仍在演变</span><span class="one">从“LLM 应用的标准架构”降级为 agent 手里的一个工具</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2020</time><span>Facebook AI 的论文提出 Retrieval-Augmented Generation。</span></li>
-      <li><time>2023</time><span>ChatGPT 之后，“切块 + embedding + 向量库 + 拼进提示词”成为几乎所有 LLM 应用的标准架构，向量数据库融资火热。</span></li>
-      <li><time>2024</time><span>长上下文出现，“RAG 已死”的争论开始；Anthropic 提出 Contextual Retrieval（切块前给每块补上下文），说明 RAG 本身也在改进。</span></li>
-      <li><time>2025</time><span>Claude Code 等 coding agent 放弃向量索引，改用 grep / find 的 agentic search，并公开说效果更好。</span></li>
-    </ul>
-    <p class="rel"><b>现状：</b>没有死，但位置变了。在 agent 里，检索是模型可以选择调用的工具之一（agentic RAG），而不是每次请求前固定执行的流水线。海量文档的企业知识库仍然离不开它。</p>
-  </div></details>
-
-  <h3><span class="lv l2">进阶</span>检索管线：RAG 要做好得过哪几关</h3>
-  <div class="prose">
-  <p>企业知识库问答绕不开 RAG。一条管线依次是：收集 → 清洗去重 → 切块 → 建索引 → 检索 → 排序 → 生成答案。常见问题几乎都出在中间几步：</p>
-  </div>
-  <div class="tbl"><table>
-    <thead><tr><th>环节</th><th>常见问题</th><th>做法</th></tr></thead>
-    <tbody>
-      <tr><td>切块</td><td>“截止 11 月 27 日”被切出来后，不知道是哪门课、哪个作业</td><td>按标题切；每块带上“地址”：文档、章节、页码、版本</td></tr>
-      <tr><td>检索</td><td>用户说“什么时候交”，文档写“提交截止”；向量能匹配，关键词不行。反过来，<code>get_user</code> 和 <code>get_users</code> 只差一个字母，向量分不清</td><td>混合检索：BM25 关键词 + 向量，用 RRF 按排名合并两路结果；分词时保持标识符完整</td></tr>
-      <tr><td>排序</td><td>两门课都有“期末项目截止”，相似度差不多</td><td>先召回几十条候选，再用 reranker 对“完整问题 + 候选”逐条打分</td></tr>
-      <tr><td>生成</td><td>塞进去的旧通知、重复副本、别的课程反而把答案淹没</td><td>只放筛过的证据，控制条数；找不到就说找不到，并给出出处</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose">
-  <p>有些问题不是找一段话就能回答的，比如“想做 AI 研究，该按什么顺序选课？”答案要把“数学 → 机器学习 → NLP”几段关系串起来。这时可以在文本块之外再建一张实体关系图，检索时沿关系找，这就是 GraphRAG。代价是建图要大量调用模型抽取实体，抽错了还会引入不存在的关系，内容更新时要同步改图。</p>
-  <p>RAG 怎么评测（召回率、排序质量、答案是否有出处、出处是否最新）放在第 15 章。</p>
-  </div>
-  <details class="term" data-term="graphrag"><summary><b>GraphRAG</b><span class="st debate">仍在演变</span><span class="one">适合关系类、全局类问题，代价是建图和维护</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2024-04</time><span>微软发表 GraphRAG：用模型从文档抽取实体和关系，再按社区做摘要，回答“整个文档集的主题是什么”这类全局问题。</span></li>
-      <li><time>2024-10</time><span>港大 LightRAG 等轻量方案出现：图和向量一起存，按实体和关系两级关键词检索，降低建图和更新的成本。</span></li>
-      <li><time>2025–26</time><span>在需要多跳推理的领域（金融关联方、法规、课程体系）使用较多；单个事实的查询仍以普通 RAG 为主。</span></li>
-    </ul>
-    <p class="rel"><b>和其他词的关系：</b>它没有换问题，只换了索引的结构。判断用不用它，只看问题是“找一个事实”还是“把几个事实连起来”。</p>
-  </div></details>
-
-  <h3><span class="lv l2">进阶</span>两个单元合起来：规则、skill、工具搜索、RAG、记忆</h3>
-  <div class="prose"><p>这几个词常被当成五样不同的东西，其实回答的是同一个问题：<b>什么内容、什么时候放进上下文</b>。区别只落在四个维度上：</p></div>
-  <div class="tbl"><table>
-    <thead><tr><th></th><th>放的是什么</th><th>常驻还是按需</th><th>谁决定放</th><th>怎么找到</th></tr></thead>
-    <tbody>
-      <tr><td>AGENTS.md</td><td>项目约定</td><td>常驻</td><td>harness</td><td>按目录层级发现</td></tr>
-      <tr><td>Skills</td><td>做事方法</td><td>索引常驻，正文按需</td><td>模型</td><td>看描述，读文件</td></tr>
-      <tr><td>Tool search</td><td>工具定义</td><td>搜索入口常驻，定义按需</td><td>模型</td><td>搜索工具</td></tr>
-      <tr><td>RAG</td><td>外部知识</td><td>按需</td><td>harness 固定执行，或模型调用</td><td>向量 / 关键词 / 图</td></tr>
-      <tr><td>Agentic search</td><td>代码、文档</td><td>按需</td><td>模型</td><td>grep、find、读文件</td></tr>
-      <tr><td>记忆文件</td><td>偏好、进度、经验</td><td>摘要常驻，细节按需</td><td>模型读写，harness 管权限</td><td>读文件，或搜索历史</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose"><p>下次再冒出一个“X 按需加载”的新词，先填这四列，就知道它和哪个老词只差一格。</p></div>
-
-  <div class="qa-wrap">
-    <div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
-    <details class="qa"><summary>Agent 的记忆怎么设计？</summary><div class="ans">
-      <ul>
-        <li>三层：工作记忆（上下文 + 压缩）、会话记忆（事件日志）、长期记忆（文件 / 结构化存储 / 向量库）。</li>
-        <li>读取用渐进披露；写入要控制权限、防污染、可过期。</li>
-      </ul>
-    </div></details>
-    <details class="qa"><summary>RAG 和 agentic search 怎么选？</summary><div class="ans">
-      <ul>
-        <li>按规模、变化频率、精确性要求对照上表。</li>
-        <li>coding 场景常用 agentic search；企业知识库常用 RAG；二者可通过“检索即工具”结合。</li>
-      </ul>
-    </div></details>
-    <details class="qa"><summary>Skills 和 AGENTS.md、MCP 有什么区别？</summary><div class="ans">
-      <ul>
-        <li>AGENTS.md：总是加载的项目规则，“在这里要遵守什么”。</li>
-        <li>Skill：按需加载的做事方法，“遇到这类任务怎么做”，可以附带脚本。</li>
-        <li>MCP：连接外部系统的协议，“能访问什么”。</li>
-        <li>三者叠加使用：规则定边界，skill 给方法，MCP 或 CLI 给能力。</li>
-      </ul>
-    </div></details>
-  </div>
-  <div class="ahead"><b class="h">前瞻 · 本章</b><ul>
-    <li><span class="cf sure">已有证据</span>在 coding agent 里，文件是长期记忆和项目知识的主要载体：规则文件、skills、进度文件、Anthropic 的 memory tool 都是文件。</li>
-    <li><span class="cf sure">已有证据</span>Claude Code、pi 等 coding agent 以 agentic search 为主。Cursor 现行文档也写明，它的 Agent 用本地的 Instant Grep 加 Explore 子 agent 搜代码，不存储代码库的 embedding（<a href="https://cursor.com/docs/agent/tools/search" target="_blank" rel="noopener">Cursor 文档</a>，2026-10 查阅）。海量文档的知识库问答仍以 RAG 为主。</li>
-    <li><span class="cf likely">作者判断</span>记忆的自动写入会普及（agent 自己总结经验写进文件），配套的是审核、过期和防污染机制。</li>
-    <li><span class="cf open">有争议</span>skill 会不会像当年的插件市场一样膨胀失控。格式简单是优点，也意味着质量和安全没有门槛。</li>
-  </ul></div>
-  <label class="understood"><input type="checkbox" data-done="c8"> 我能设计三层记忆，并对比两种检索方式</label>
+<div class="eyebrow">第 8 章 <span class="imp often">重要</span></div>
+<h2>记忆与检索</h2>
+<p class="lead">本章分两个单元。<b>单元 A · 规则、技能与记忆</b>：agent 自己的项目约定、做事方法和经验怎么存、怎么加载、怎么更新。<b>单元 B · 知识检索</b>：外部的大量文档怎么找到并放进上下文。最后用一张表把两边放在一起比较。</p>
+<div class="eyebrow" style="margin-top:28px">单元 A · 规则、技能与记忆</div>
+<h3><span class="lv l1">基础</span>三层记忆</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>是什么</th>
+<th>典型实现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>工作记忆</td>
+<td>当前上下文窗口里的内容</td>
+<td>messages + 压缩</td>
+</tr>
+<tr>
+<td>会话记忆</td>
+<td>一次会话的完整记录，可以恢复和分支</td>
+<td>只追加的事件日志（第 10 章）</td>
+</tr>
+<tr>
+<td>长期记忆</td>
+<td>跨会话的知识、偏好、项目约定</td>
+<td>规则文件、笔记、数据库、向量库</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>按时间跨度看，会话记忆和长期记忆之间还夹着一层：<b>只属于这个任务、但要跨会话保留的进度</b>，比如交接摘要、todo 清单、功能清单。用户说“接着做我的作业”，靠的就是它。第 9 章的长时任务主要靠这一层。</p>
+</div>
+<h3><span class="lv l2">进阶</span>长期记忆怎么写</h3>
+<div class="prose">
+<p>长期记忆的写入比读取更难：</p>
+<ul>
+<li><b>谁来写：</b>模型自动写容易积累错误，人工确认又太慢。常见折中是模型提议、人确认，或只允许写入特定文件。</li>
+<li><b>记忆污染：</b>被注入的恶意内容如果写进长期记忆，会影响之后所有会话。写入前要校验来源。</li>
+<li><b>过期与冲突：</b>项目约定会变，记忆要能更新和失效。更正一条旧记录时，新记录要带上来源、更新时间和“取代了哪条”，否则两条矛盾的记录会并存，模型不知道信哪个。</li>
+<li><b>存储方式不决定检索方式：</b>同一份文本笔记，可以用关键词搜（适合 ID、日期），也可以用向量搜（适合换了说法的问题），或者两者混合。先用文件存，检索方式以后可以换。</li>
+<li><b>定期整理：</b>原始历史越积越多。有的 agent 会定期把历史对话压成几条持久的事实和偏好，写进记忆文件，原始记录留着备查。</li>
+</ul>
+</div>
+<details class="term" data-term="memory"><summary><b>Agent memory</b><span class="st debate">仍在演变</span><span class="one">在 coding agent 里，从“向量库存对话”转向“文件 + 模型自己读写”</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2023-10</time><span>MemGPT 论文：借鉴操作系统的分页，把上下文当内存、外部存储当磁盘，由模型自己换入换出。后来发展成 Letta。</span></li>
+<li><time>2024</time><span>ChatGPT 上线跨会话记忆；各类“记忆层”产品多用向量库存储和检索对话片段。</span></li>
+<li><time>2025-09</time><span>Anthropic 推出 memory tool：记忆就是一个目录里的文件，模型用查看、创建、修改等操作自己管理。</span></li>
+<li><time>2025–26</time><span>coding agent 普遍用 CLAUDE.md / AGENTS.md、skills、进度文件做长期记忆，全部是文件。</span></li>
+</ul>
+<p class="rel"><b>趋势：</b>文件胜出的原因很工程：人能直接读和改、能进 git、能审计、模型天然会用。向量库仍适合海量非结构化内容的召回。注意范围：这说的是 coding agent 这类能读写文件的场景；聊天产品的跨会话记忆多由厂商托管，存储和检索方式并不公开，不能一概而论。</p>
+</div></details>
+<h3><span class="lv l3">深入</span>pi 的规则文件与 skill：文件 + 渐进披露</h3>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">不建向量索引；规则文件逐级向上发现；skill 只放名字和描述，全文按需读取。</span><span class="pf">docs/configuration.md · core/skills.ts · formatSkillsForPrompt()</span></summary><div class="pb">
+<ul>
+<li><b>不建向量索引。</b>pi 让模型用 bash（rg、find）或可选的 grep / find 工具搜代码。</li>
+<li><b>规则文件分层发现：</b>从 agent 目录（<code>~/.pi/agent</code>）、当前目录以及每一级父目录收集 <code>AGENTS.md</code>（或 <code>CLAUDE.md</code>），放进 system prompt 的 <code>project_context</code> 段。monorepo 里子目录可以有自己的规则。</li>
+<li><b>skill 渐进披露：</b>启动时只把每个 skill 的名字、描述、文件路径放进 <code>&lt;available_skills&gt;</code>，并告诉模型“任务匹配时用 read 工具读取 skill 文件”。全文只在需要时才进上下文。</li>
+</ul>
+</div></details>
+<details class="term" data-term="skills"><summary><b>Skills</b><span class="st hot">正流行</span><span class="one">2025 年 10 月出现，两个月成为开放标准，被认为“可能比 MCP 更重要”</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2025-10</time><span>Anthropic 推出 Skills：一个文件夹，里面一份带 name / description 头信息的 <code>SKILL.md</code>，加上可选的脚本和资料。只有描述常驻上下文，正文按需读取。</span></li>
+<li><time>2025-10</time><span>Simon Willison 撰文认为它可能比 MCP 影响更大：简单到只是 Markdown，任何能读文件的 agent 都能用。</span></li>
+<li><time>2025-12</time><span>规范以开放标准发布（agentskills.io），OpenAI Codex、VS Code 等很快支持。</span></li>
+<li><time>2026</time><span>支持它的工具从十几个增长到数十个，也出现了技能市场和随之而来的供应链安全问题（第 13 章）。</span></li>
+</ul>
+<p class="rel"><b>和其他词的关系：</b> <b>vs AGENTS.md：</b>规则文件每次都加载，讲“这个项目的约定”；skill 按需加载，讲“某类任务怎么做”。 <b>vs MCP：</b>MCP 解决“能连上什么系统”，skill 解决“该怎么做”；一个 skill 里可以写“用这个 CLI 或这个 MCP 工具完成某步”，二者是互补的（第 16 章）。 <b>vs 渐进披露：</b>skill 就是渐进披露这个思路的标准化包装。</p>
+</div></details>
+<div class="eyebrow" style="margin-top:28px">单元 B · 知识检索</div>
+<h3><span class="lv l2">进阶</span>RAG vs Agentic Search</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th></th>
+<th>经典 RAG（预建索引，请求前固定检索）</th>
+<th>Agentic search（模型现场多轮搜原始文件）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>前期成本</td>
+<td>切块、建索引（向量检索还要 embedding）、维护索引同步</td>
+<td>几乎为零</td>
+</tr>
+<tr>
+<td>查询成本</td>
+<td>一次检索，便宜、快</td>
+<td>多轮工具调用，慢、贵</td>
+</tr>
+<tr>
+<td>准确性</td>
+<td>取决于切块、检索和重排：向量检索擅长“说法不同、意思相近”，不擅长精确标识符；切块会切断上下文</td>
+<td>精确字符串定位好，能顺着引用继续找；但也可能漏搜，取决于查询怎么写</td>
+</tr>
+<tr>
+<td>新鲜度</td>
+<td>依赖索引更新</td>
+<td>直接读当前文件，天然最新</td>
+</tr>
+<tr>
+<td>适合</td>
+<td>海量文档、知识库问答</td>
+<td>单个代码仓库、中等规模</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>二者可以结合：把检索包装成一个工具（<code>search_docs</code>），由模型决定查不查、查几次、换不换关键词，这叫 agentic RAG。RAG 自身的常见优化：混合检索（BM25 + 向量）、rerank、查询改写、按文档结构切块。</p>
+</div>
+<details class="term" data-term="rag"><summary><b>RAG</b><span class="st debate">仍在演变</span><span class="one">从“LLM 应用的标准架构”降级为 agent 手里的一个工具</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2020</time><span>Facebook AI 的论文提出 Retrieval-Augmented Generation。</span></li>
+<li><time>2023</time><span>ChatGPT 之后，“切块 + embedding + 向量库 + 拼进提示词”成为几乎所有 LLM 应用的标准架构，向量数据库融资火热。</span></li>
+<li><time>2024</time><span>长上下文出现，“RAG 已死”的争论开始；Anthropic 提出 Contextual Retrieval（切块前给每块补上下文），说明 RAG 本身也在改进。</span></li>
+<li><time>2025</time><span>Claude Code 等 coding agent 放弃向量索引，改用 grep / find 的 agentic search，并公开说效果更好。</span></li>
+</ul>
+<p class="rel"><b>现状：</b>没有死，但位置变了。在 agent 里，检索是模型可以选择调用的工具之一（agentic RAG），而不是每次请求前固定执行的流水线。海量文档的企业知识库仍然离不开它。</p>
+</div></details>
+<h3><span class="lv l2">进阶</span>检索管线：RAG 要做好得过哪几关</h3>
+<div class="prose">
+<p>企业知识库问答绕不开 RAG。一条管线依次是：收集 → 清洗去重 → 切块 → 建索引 → 检索 → 排序 → 生成答案。常见问题几乎都出在中间几步：</p>
+</div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>环节</th>
+<th>常见问题</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>切块</td>
+<td>“截止 11 月 27 日”被切出来后，不知道是哪门课、哪个作业</td>
+<td>按标题切；每块带上“地址”：文档、章节、页码、版本</td>
+</tr>
+<tr>
+<td>检索</td>
+<td>用户说“什么时候交”，文档写“提交截止”；向量能匹配，关键词不行。反过来，<code>get_user</code> 和 <code>get_users</code> 只差一个字母，向量分不清</td>
+<td>混合检索：BM25 关键词 + 向量，用 RRF 按排名合并两路结果；分词时保持标识符完整</td>
+</tr>
+<tr>
+<td>排序</td>
+<td>两门课都有“期末项目截止”，相似度差不多</td>
+<td>先召回几十条候选，再用 reranker 对“完整问题 + 候选”逐条打分</td>
+</tr>
+<tr>
+<td>生成</td>
+<td>塞进去的旧通知、重复副本、别的课程反而把答案淹没</td>
+<td>只放筛过的证据，控制条数；找不到就说找不到，并给出出处</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>有些问题不是找一段话就能回答的，比如“想做 AI 研究，该按什么顺序选课？”答案要把“数学 → 机器学习 → NLP”几段关系串起来。这时可以在文本块之外再建一张实体关系图，检索时沿关系找，这就是 GraphRAG。代价是建图要大量调用模型抽取实体，抽错了还会引入不存在的关系，内容更新时要同步改图。</p>
+<p>RAG 怎么评测（召回率、排序质量、答案是否有出处、出处是否最新）放在第 15 章。</p>
+</div>
+<details class="term" data-term="graphrag"><summary><b>GraphRAG</b><span class="st debate">仍在演变</span><span class="one">适合关系类、全局类问题，代价是建图和维护</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2024-04</time><span>微软发表 GraphRAG：用模型从文档抽取实体和关系，再按社区做摘要，回答“整个文档集的主题是什么”这类全局问题。</span></li>
+<li><time>2024-10</time><span>港大 LightRAG 等轻量方案出现：图和向量一起存，按实体和关系两级关键词检索，降低建图和更新的成本。</span></li>
+<li><time>2025–26</time><span>在需要多跳推理的领域（金融关联方、法规、课程体系）使用较多；单个事实的查询仍以普通 RAG 为主。</span></li>
+</ul>
+<p class="rel"><b>和其他词的关系：</b>它没有换问题，只换了索引的结构。判断用不用它，只看问题是“找一个事实”还是“把几个事实连起来”。</p>
+</div></details>
+<h3><span class="lv l2">进阶</span>两个单元合起来：规则、skill、工具搜索、RAG、记忆</h3>
+<div class="prose">
+<p>这几个词常被当成五样不同的东西，其实回答的是同一个问题：<b>什么内容、什么时候放进上下文</b>。区别只落在四个维度上：</p>
+</div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th></th>
+<th>放的是什么</th>
+<th>常驻还是按需</th>
+<th>谁决定放</th>
+<th>怎么找到</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AGENTS.md</td>
+<td>项目约定</td>
+<td>常驻</td>
+<td>harness</td>
+<td>按目录层级发现</td>
+</tr>
+<tr>
+<td>Skills</td>
+<td>做事方法</td>
+<td>索引常驻，正文按需</td>
+<td>模型</td>
+<td>看描述，读文件</td>
+</tr>
+<tr>
+<td>Tool search</td>
+<td>工具定义</td>
+<td>搜索入口常驻，定义按需</td>
+<td>模型</td>
+<td>搜索工具</td>
+</tr>
+<tr>
+<td>RAG</td>
+<td>外部知识</td>
+<td>按需</td>
+<td>harness 固定执行，或模型调用</td>
+<td>向量 / 关键词 / 图</td>
+</tr>
+<tr>
+<td>Agentic search</td>
+<td>代码、文档</td>
+<td>按需</td>
+<td>模型</td>
+<td>grep、find、读文件</td>
+</tr>
+<tr>
+<td>记忆文件</td>
+<td>偏好、进度、经验</td>
+<td>摘要常驻，细节按需</td>
+<td>模型读写，harness 管权限</td>
+<td>读文件，或搜索历史</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>下次再冒出一个“X 按需加载”的新词，先填这四列，就知道它和哪个老词只差一格。</p>
+</div>
+<div class="qa-wrap">
+<div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
+<details class="qa"><summary>Agent 的记忆怎么设计？</summary><div class="ans">
+<ul>
+<li>三层：工作记忆（上下文 + 压缩）、会话记忆（事件日志）、长期记忆（文件 / 结构化存储 / 向量库）。</li>
+<li>读取用渐进披露；写入要控制权限、防污染、可过期。</li>
+</ul>
+</div></details>
+<details class="qa"><summary>RAG 和 agentic search 怎么选？</summary><div class="ans">
+<ul>
+<li>按规模、变化频率、精确性要求对照上表。</li>
+<li>coding 场景常用 agentic search；企业知识库常用 RAG；二者可通过“检索即工具”结合。</li>
+</ul>
+</div></details>
+<details class="qa"><summary>Skills 和 AGENTS.md、MCP 有什么区别？</summary><div class="ans">
+<ul>
+<li>AGENTS.md：总是加载的项目规则，“在这里要遵守什么”。</li>
+<li>Skill：按需加载的做事方法，“遇到这类任务怎么做”，可以附带脚本。</li>
+<li>MCP：连接外部系统的协议，“能访问什么”。</li>
+<li>三者叠加使用：规则定边界，skill 给方法，MCP 或 CLI 给能力。</li>
+</ul>
+</div></details>
+</div>
+<div class="ahead"><b class="h">前瞻 · 本章</b><ul>
+<li><span class="cf sure">已有证据</span>在 coding agent 里，文件是长期记忆和项目知识的主要载体：规则文件、skills、进度文件、Anthropic 的 memory tool 都是文件。</li>
+<li><span class="cf sure">已有证据</span>Claude Code、pi 等 coding agent 以 agentic search 为主。Cursor 现行文档也写明，它的 Agent 用本地的 Instant Grep 加 Explore 子 agent 搜代码，不存储代码库的 embedding（<a href="https://cursor.com/docs/agent/tools/search" target="_blank" rel="noopener">Cursor 文档</a>，2026-10 查阅）。海量文档的知识库问答仍以 RAG 为主。</li>
+<li><span class="cf likely">作者判断</span>记忆的自动写入会普及（agent 自己总结经验写进文件），配套的是审核、过期和防污染机制。</li>
+<li><span class="cf open">有争议</span>skill 会不会像当年的插件市场一样膨胀失控。格式简单是优点，也意味着质量和安全没有门槛。</li>
+</ul>
+</div>
+<div class="selftest" data-quiz>
+<div class="qa-head"><span>自测</span><span class="score">1 题</span></div>
+<div>
+<div class="q" data-a="1"><div class="qt">Skills 和 tool search 的本质区别是？</div><div class="opts"><button class="opt">一个是开放标准、一个是厂商 API，原理完全不同</button><button class="opt">都是“完整内容按需加载”，主要区别在装的是做事方法还是工具定义</button><button class="opt">tool search 是 Skills 的升级版</button></div><div class="why" hidden><span class="verdict"></span>同属“上下文里放什么”这个问题；用第 8 章那张四列表，二者主要差在“放的是什么”。常驻的部分也略有不同：skill 常驻名字和描述，tool search 通常只常驻一个搜索入口。</div></div>
+</div>
+</div>
+<label class="understood"><input type="checkbox" data-done="c8"> 我能设计三层记忆，并对比两种检索方式</label>
 </section>
 
-<!-- 9 -->
 <section class="ch" id="c9" data-t="规划、多 Agent 与长任务" data-part="原理" data-imp="often">
-  <div class="eyebrow">第 9 章 <span class="imp often">重要</span></div>
-  <h2>规划、自我验证、多 Agent 与长时任务</h2>
-  <p class="lead">这一章有两条主线。一条是<b>怎么分工</b>：规划、自我验证、多 agent。另一条是<b>怎么跨上下文和故障接着干</b>：长时任务，建议接着读第 10 章（状态恢复）和第 14 章（可靠性），三章讲的是同一条线。“自我改进”一节是延伸内容，第一遍可以跳过。</p>
-
-  <h3><span class="lv l1">基础</span>三种提升成功率的结构</h3>
-  <div class="prose">
-  <ul>
-    <li><b>规划：</b>先产出计划再执行，可审查、不易跑偏。</li>
-    <li><b>自我验证：</b>改完跑测试、调完查结果。给 agent 一个能验证结果的手段，往往是提升成功率最有效的一步。</li>
-    <li><b>多 agent：</b>主 agent 把子任务交给独立上下文的子 agent，子 agent 只返回结论。</li>
-  </ul>
-  </div>
-
-  <h3><span class="lv l2">进阶</span>多 agent 的模式与代价</h3>
-  <div class="tbl"><table>
-    <thead><tr><th>模式</th><th>结构</th><th>适合</th></tr></thead>
-    <tbody>
-      <tr><td>编排者-执行者</td><td>主 agent 拆任务，派给子 agent，汇总</td><td>可拆成独立子问题的调研、批量修改</td></tr>
-      <tr><td>流水线</td><td>侦察 → 规划 → 执行 → 审查，各阶段专职</td><td>流程清晰的开发任务</td></tr>
-      <tr><td>评估者-优化者</td><td>一个生成，一个按标准评审，循环改进</td><td>有明确评价标准的产出</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose"><p>多 agent 的收益是<b>上下文隔离</b>和<b>并行</b>；代价是 token 成倍增长、子 agent 间信息不共享导致决策冲突、调试和评测更难。改同一模块代码这种强耦合任务，单 agent 往往更好。</p></div>
-  <details class="term" data-term="multiagent"><summary><b>Multi-agent</b><span class="st debate">仍在演变</span><span class="one">从“一群 AI 角色扮演开会”演变成“子 agent 做上下文隔离”</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2023</time><span>AutoGen、CrewAI、MetaGPT 等流行“产品经理 agent + 架构师 agent + 程序员 agent”的角色分工，演示好看，实际效果不稳定。</span></li>
-      <li><time>2025-06</time><span>同一周两篇文章：Cognition 发表《Don't Build Multi-Agents》，认为子 agent 之间信息不共享会导致决策冲突；Anthropic 发表多 agent 研究系统的经验，在调研类任务上明显优于单 agent，但 token 消耗是普通对话的约 15 倍。</span></li>
-      <li><time>2025 下半年</time><span>Claude Code 等支持自定义子 agent；较多团队的做法逐渐趋同：读多写少、可并行的任务（调研、搜索、审查）用子 agent；强耦合的写操作留在一个 agent 里。</span></li>
-      <li><time>2026-01</time><span>Kimi K2.5 推出 agent swarm：用强化学习只训练协调者、子 agent 不动，由模型自己决定拆分和派发。分工的决策开始被训练进模型（第 2 章）。</span></li>
-    </ul>
-    <p class="rel"><b>两篇文章其实不矛盾：</b>一个讲写代码（强耦合），一个讲调研（可并行）。“多 agent 好不好”这个问题本身问错了，要问的是任务能不能拆成上下文独立的子问题。</p>
-  </div></details>
-
-  <h3><span class="lv l2">进阶</span>多 agent 的三类协调失败</h3>
-  <div class="prose"><p>拆开以后，问题出在“合”的时候。三类最常见的失败和对策：</p></div>
-  <div class="tbl"><table>
-    <thead><tr><th>失败</th><th>例子</th><th>对策</th></tr></thead>
-    <tbody>
-      <tr><td>分派含糊</td><td>“发布前审一遍这个应用”：三个子 agent 都去看了登录，没人看支付</td><td>按维度明确分工（安全 / 性能 / 测试），规定返回格式：结论 + 证据</td></tr>
-      <tr><td>上下文被淹没</td><td>子 agent 把完整日志和文件内容都交回来，主 agent 读完忘了目标</td><td>只回传结论和证据链接，完整轨迹留在子 agent 那边，需要时再取</td></tr>
-      <tr><td>各自完成，拼不起来</td><td>前端期待 <code>access_token</code>，后端返回 <code>token</code>。两边都报告“完成”，用户还是登录不了</td><td>先定接口契约再分头做；最后由主 agent 跑端到端测试，而不是相信各自的“完成”</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose"><p>第三类最说明问题：子任务各自的验证都通过了，整体还是错的。所以判断完成的验证器要放在“合”的那一层（第 15 章）。</p></div>
-
-  <h3><span class="lv l2">进阶</span>长时任务：跨越多个上下文窗口</h3>
-  <div class="prose">
-  <p>任务跑几个小时，往往要经历多次压缩甚至多次全新会话。每个新会话就像换班的工程师，<b>不记得上一班干了什么</b>。Anthropic 2025 年底的《Effective harnesses for long-running agents》给出了一套被广泛借鉴的做法：</p>
-  <ul>
-    <li><b>初始化 agent 只跑一次：</b>把需求拆成一份功能清单（<code>feature_list.json</code>，每项标记通过 / 未通过），写好启动脚本 <code>init.sh</code>，建立进度日志，做第一次 git 提交。</li>
-    <li><b>后续每个会话固定流程：</b>读进度日志和 <code>git log</code> → 跑启动脚本确认程序还能用 → 挑<b>一个</b>未通过的功能实现 → 端到端测试（用浏览器自动化像用户一样点） → 更新清单和日志 → 提交。</li>
-    <li><b>功能清单用 JSON 而不是 Markdown：</b>原文的解释是模型不太会随意改写或覆盖 JSON 文件，而 Markdown 容易被“顺手整理”。</li>
-    <li><b>针对的失败模式：</b>过早宣布完成、留下半成品状态、没测就标记完成、新会话不知道怎么启动项目。</li>
-  </ul>
-  <p>这套做法的本质是：<b>把记忆从上下文搬到文件和 git 里</b>，每个会话都能从磁盘重建现场。它和第 10 章的“事件日志恢复”是同一思路在更高一层的应用。</p>
-  <p><b>并行的 agent 用 git worktree 隔离。</b>同时跑多个 agent 改同一个仓库时，各自一个 worktree（同一仓库的多个工作目录），互不干扰，最后各自提交或合并。这已是 Claude Code、Codex 等工具的常见做法。</p>
-  </div>
-
-  <h3><span class="lv l3">深入</span>延伸 · 自我改进：把验证过的经验写回文件</h3>
-  <div class="prose">
-  <p>agent 做完一件事，能不能下次做得更好？不改权重也可以：把这次学到的东西写回 skill 或记忆文件，下次加载时就用上了。比如一个做幻灯片的 skill，某次渲染后发现图片压住了标题，就给 SKILL.md 加一条“图片放在标题下方，每次修改后重新渲染检查”。</p>
-  <p>有的项目把这类更新分成三种：<b>修复</b>现有 skill、从现有 skill <b>派生</b>出适合新任务的版本、从一次成功的过程里<b>新捕获</b>一个 skill。做 skill 检索的项目则用 BM25 先召回候选、再用向量重排，从上百个 skill 里挑出合适的那个。</p>
-  <p>这件事的本质是第 ⑥ 个问题“验证”：<b>同一个验证信号，用在不同的地方</b>。</p>
-  </div>
-  <div class="tbl"><table>
-    <thead><tr><th>验证信号用在哪</th><th>改变的是什么</th><th>见</th></tr></thead>
-    <tbody>
-      <tr><td>运行中</td><td>这一次的下一步：测试没过就接着改</td><td>本章基础</td></tr>
-      <tr><td>离线评测</td><td>你的判断：这个改动该不该上线</td><td>第 15 章</td></tr>
-      <tr><td>写回文件</td><td>下一次的上下文：skill、记忆、规则</td><td>本节</td></tr>
-      <tr><td>训练</td><td>模型权重</td><td>第 2 章</td></tr>
-    </tbody>
-  </table></div>
-  <div class="prose">
-  <p>写回文件的风险和长期记忆一样：错误经验会污染以后所有任务，被注入的内容也可能借此长期驻留（第 13 章）。工程上的做法：每次更新都留版本；更新要在<b>另一个任务</b>上验证有效才保留，避免只对这一次有用；来路不明的 skill 先审再用。</p>
-  </div>
-  <details class="term" data-term="selfevolve"><summary><b>Skill 自进化</b><span class="st hot">正流行</span><span class="one">把验证过的经验写回 skill 和记忆文件</span></summary><div class="tb">
-    <ul class="tl">
-      <li><time>2023-05</time><span>Voyager 在《我的世界》里让 agent 把成功的动作写成代码技能库，后续任务直接调用，这是“技能库”思路的早期代表。</span></li>
-      <li><time>2025-10</time><span>Skills 成为标准格式后，让 agent 自己写、自己改 skill 变得很自然。</span></li>
-      <li><time>2026</time><span>出现专门做 skill 检索、修复、派生和版本管理的开源项目，“自进化”成为 agent 课程和研究的独立主题。</span></li>
-    </ul>
-    <p class="rel"><b>和其他词的关系：</b>它和强化学习是同一个回路（尝试 → 验证 → 改进），只是改的是文件而不是权重，所以更快、可读、可回滚，也更容易被污染。</p>
-  </div></details>
-
-  <h3><span class="lv l3">深入</span>pi 怎么在核心之外实现它们</h3>
-  <details class="pi"><summary><b>pi 的做法</b><span class="pt">子 agent 就是再起一个 pi 子进程；计划模式是一个禁用写工具的扩展。</span><span class="pf">examples/extensions/subagent · examples/extensions/plan-mode</span></summary><div class="pb">
-    <ul>
-      <li><b>子 agent = 子进程：</b>每次调用子 agent，扩展都 <code>spawn</code> 一个新的 <code>pi --mode json -p --no-session</code> 进程，逐行解析它的 JSON 事件流。上下文天然隔离，崩溃也互不影响；中止时 Ctrl+C 会传播并杀掉子进程。</li>
-      <li><b>角色用 Markdown 定义：</b><code>scout</code>（快速侦察，返回压缩后的上下文）、<code>planner</code>（出计划）、<code>reviewer</code>（审查）、<code>worker</code>（全能执行）。</li>
-      <li><b>流水线用模板串起来：</b><code>implement</code> = scout → planner → worker；<code>implement-and-review</code> = worker → reviewer → worker。</li>
-      <li><b>计划模式：</b>禁用 edit / write，bash 只允许只读命令白名单；从回复里的 <code>Plan:</code> 段提取编号步骤，执行时用 <code>[DONE:n]</code> 标记追踪进度，状态随会话持久化。</li>
-    </ul>
-    <p>这说明了一个架构观点：<b>只要核心提供“事件 + 工具注册 + 进程级复用”，规划和多 agent 都可以作为插件实现</b>，不必塞进内核。</p>
-  </div></details>
-  <div class="qa-wrap">
-    <div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
-    <details class="qa"><summary>什么时候该用多 agent？</summary><div class="ans">
-      <ul>
-        <li>子任务独立、可并行、会产生大量中间信息时用。</li>
-        <li>强耦合、需要共享大量上下文时不用。</li>
-        <li>工程要点：子 agent 的输入输出要有契约，限制它的工具和预算；子 agent 用进程或独立会话隔离。</li>
-      </ul>
-      <div class="follow"><b>再深一步：</b>子 agent 用进程隔离还是线程内隔离？→ 进程隔离更稳（崩溃、内存都隔开），可以直接复用 CLI 的 JSON 模式；代价是启动开销和序列化。pi 选择了进程。注意：普通子进程和父进程用同一个系统账户，文件和网络权限并没有隔开；要隔离权限，还得加沙箱、容器或独立账户（第 13 章）。</div>
-    </div></details>
-    <details class="qa"><summary>一个任务要跑好几个小时，跨了多次上下文窗口，怎么保证不跑偏？</summary><div class="ans">
-      <ul>
-        <li>把状态放在上下文之外：功能清单（JSON）、进度日志、git 提交历史。</li>
-        <li>每个会话固定开场：读进度 → 冒烟测试 → 只做一项 → 端到端验证 → 提交。</li>
-        <li>完成的判定交给测试，而不是模型的自我宣布。</li>
-      </ul>
-    </div></details>
-  </div>
-  <div class="ahead"><b class="h">前瞻 · 本章</b><ul>
-    <li><span class="cf sure">已有证据</span>多家厂商的实践建议都把“给 agent 一个验证手段”列为提升成功率最有效的手段之一。任务越长，越不能靠人一直看着，它的分量只会更重。</li>
-    <li><span class="cf sure">已有证据</span>公开的工程文章（Anthropic、Cognition 等）多把子 agent 的价值归于上下文隔离和并行；“产品经理 + 程序员”式的角色扮演分工在 coding agent 产品里已经少见。</li>
-    <li><span class="cf likely">作者判断</span>强制规划、强制更新待办清单这类脚手架会变薄。Claude Code 团队提过，一个防止模型“谎称重构完成”的 todo 强制机制，在他们的新模型上已经没有必要；这是单一团队、单一模型的观察，换模型前仍要评测。用文件记录进度、用测试判定完成这类外部状态不会变薄。</li>
-    <li><span class="cf likely">作者判断</span>多个 agent 并行干活、人来分派和验收会成为常见工作方式，配套的是 worktree 隔离、任务队列和 review 流程（第 17 章）。</li>
-    <li><span class="cf likely">作者判断</span>agent 把经验写回 skill 和记忆会普及，配套的是版本、跨任务验证和审核，和代码合并的流程越来越像。</li>
-    <li><span class="cf open">有争议</span>分工的决策会多大程度被训练进模型。已有厂商在训练协调者，效果还有待更多验证。</li>
-  </ul></div>
-  <label class="understood"><input type="checkbox" data-done="c9"> 我能判断何时用多 agent，并讲清 pi 子 agent 的实现</label>
+<div class="eyebrow">第 9 章 <span class="imp often">重要</span></div>
+<h2>规划、自我验证、多 Agent 与长时任务</h2>
+<p class="lead">这一章有两条主线。一条是<b>怎么分工</b>：规划、自我验证、多 agent。另一条是<b>怎么跨上下文和故障接着干</b>：长时任务，建议接着读第 10 章（状态恢复）和第 14 章（可靠性），三章讲的是同一条线。“自我改进”一节是延伸内容，第一遍可以跳过。</p>
+<h3><span class="lv l1">基础</span>三种提升成功率的结构</h3>
+<div class="prose">
+<ul>
+<li><b>规划：</b>先产出计划再执行，可审查、不易跑偏。</li>
+<li><b>自我验证：</b>改完跑测试、调完查结果。给 agent 一个能验证结果的手段，往往是提升成功率最有效的一步。</li>
+<li><b>多 agent：</b>主 agent 把子任务交给独立上下文的子 agent，子 agent 只返回结论。</li>
+</ul>
+</div>
+<h3><span class="lv l2">进阶</span>多 agent 的模式与代价</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>模式</th>
+<th>结构</th>
+<th>适合</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>编排者-执行者</td>
+<td>主 agent 拆任务，派给子 agent，汇总</td>
+<td>可拆成独立子问题的调研、批量修改</td>
+</tr>
+<tr>
+<td>流水线</td>
+<td>侦察 → 规划 → 执行 → 审查，各阶段专职</td>
+<td>流程清晰的开发任务</td>
+</tr>
+<tr>
+<td>评估者-优化者</td>
+<td>一个生成，一个按标准评审，循环改进</td>
+<td>有明确评价标准的产出</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>多 agent 的收益是<b>上下文隔离</b>和<b>并行</b>；代价是 token 成倍增长、子 agent 间信息不共享导致决策冲突、调试和评测更难。改同一模块代码这种强耦合任务，单 agent 往往更好。</p>
+</div>
+<details class="term" data-term="multiagent"><summary><b>Multi-agent</b><span class="st debate">仍在演变</span><span class="one">从“一群 AI 角色扮演开会”演变成“子 agent 做上下文隔离”</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2023</time><span>AutoGen、CrewAI、MetaGPT 等流行“产品经理 agent + 架构师 agent + 程序员 agent”的角色分工，演示好看，实际效果不稳定。</span></li>
+<li><time>2025-06</time><span>同一周两篇文章：Cognition 发表《Don't Build Multi-Agents》，认为子 agent 之间信息不共享会导致决策冲突；Anthropic 发表多 agent 研究系统的经验，在调研类任务上明显优于单 agent，但 token 消耗是普通对话的约 15 倍。</span></li>
+<li><time>2025 下半年</time><span>Claude Code 等支持自定义子 agent；较多团队的做法逐渐趋同：读多写少、可并行的任务（调研、搜索、审查）用子 agent；强耦合的写操作留在一个 agent 里。</span></li>
+<li><time>2026-01</time><span>Kimi K2.5 推出 agent swarm：用强化学习只训练协调者、子 agent 不动，由模型自己决定拆分和派发。分工的决策开始被训练进模型（第 2 章）。</span></li>
+</ul>
+<p class="rel"><b>两篇文章其实不矛盾：</b>一个讲写代码（强耦合），一个讲调研（可并行）。“多 agent 好不好”这个问题本身问错了，要问的是任务能不能拆成上下文独立的子问题。</p>
+</div></details>
+<h3><span class="lv l2">进阶</span>多 agent 的三类协调失败</h3>
+<div class="prose">
+<p>拆开以后，问题出在“合”的时候。三类最常见的失败和对策：</p>
+</div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>失败</th>
+<th>例子</th>
+<th>对策</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>分派含糊</td>
+<td>“发布前审一遍这个应用”：三个子 agent 都去看了登录，没人看支付</td>
+<td>按维度明确分工（安全 / 性能 / 测试），规定返回格式：结论 + 证据</td>
+</tr>
+<tr>
+<td>上下文被淹没</td>
+<td>子 agent 把完整日志和文件内容都交回来，主 agent 读完忘了目标</td>
+<td>只回传结论和证据链接，完整轨迹留在子 agent 那边，需要时再取</td>
+</tr>
+<tr>
+<td>各自完成，拼不起来</td>
+<td>前端期待 <code>access_token</code>，后端返回 <code>token</code>。两边都报告“完成”，用户还是登录不了</td>
+<td>先定接口契约再分头做；最后由主 agent 跑端到端测试，而不是相信各自的“完成”</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>第三类最说明问题：子任务各自的验证都通过了，整体还是错的。所以判断完成的验证器要放在“合”的那一层（第 15 章）。</p>
+</div>
+<h3><span class="lv l2">进阶</span>长时任务：跨越多个上下文窗口</h3>
+<div class="prose">
+<p>任务跑几个小时，往往要经历多次压缩甚至多次全新会话。每个新会话就像换班的工程师，<b>不记得上一班干了什么</b>。Anthropic 2025 年底的《Effective harnesses for long-running agents》给出了一套被广泛借鉴的做法：</p>
+<ul>
+<li><b>初始化 agent 只跑一次：</b>把需求拆成一份功能清单（<code>feature_list.json</code>，每项标记通过 / 未通过），写好启动脚本 <code>init.sh</code>，建立进度日志，做第一次 git 提交。</li>
+<li><b>后续每个会话固定流程：</b>读进度日志和 <code>git log</code> → 跑启动脚本确认程序还能用 → 挑<b>一个</b>未通过的功能实现 → 端到端测试（用浏览器自动化像用户一样点） → 更新清单和日志 → 提交。</li>
+<li><b>功能清单用 JSON 而不是 Markdown：</b>原文的解释是模型不太会随意改写或覆盖 JSON 文件，而 Markdown 容易被“顺手整理”。</li>
+<li><b>针对的失败模式：</b>过早宣布完成、留下半成品状态、没测就标记完成、新会话不知道怎么启动项目。</li>
+</ul>
+<p>这套做法的本质是：<b>把记忆从上下文搬到文件和 git 里</b>，每个会话都能从磁盘重建现场。它和第 10 章的“事件日志恢复”是同一思路在更高一层的应用。</p>
+<p><b>并行的 agent 用 git worktree 隔离。</b>同时跑多个 agent 改同一个仓库时，各自一个 worktree（同一仓库的多个工作目录），互不干扰，最后各自提交或合并。这已是 Claude Code、Codex 等工具的常见做法。</p>
+</div>
+<h3><span class="lv l3">深入</span>延伸 · 自我改进：把验证过的经验写回文件</h3>
+<div class="prose">
+<p>agent 做完一件事，能不能下次做得更好？不改权重也可以：把这次学到的东西写回 skill 或记忆文件，下次加载时就用上了。比如一个做幻灯片的 skill，某次渲染后发现图片压住了标题，就给 SKILL.md 加一条“图片放在标题下方，每次修改后重新渲染检查”。</p>
+<p>有的项目把这类更新分成三种：<b>修复</b>现有 skill、从现有 skill <b>派生</b>出适合新任务的版本、从一次成功的过程里<b>新捕获</b>一个 skill。做 skill 检索的项目则用 BM25 先召回候选、再用向量重排，从上百个 skill 里挑出合适的那个。</p>
+<p>这件事的本质是第 ⑥ 个问题“验证”：<b>同一个验证信号，用在不同的地方</b>。</p>
+</div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>验证信号用在哪</th>
+<th>改变的是什么</th>
+<th>见</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>运行中</td>
+<td>这一次的下一步：测试没过就接着改</td>
+<td>本章基础</td>
+</tr>
+<tr>
+<td>离线评测</td>
+<td>你的判断：这个改动该不该上线</td>
+<td>第 15 章</td>
+</tr>
+<tr>
+<td>写回文件</td>
+<td>下一次的上下文：skill、记忆、规则</td>
+<td>本节</td>
+</tr>
+<tr>
+<td>训练</td>
+<td>模型权重</td>
+<td>第 2 章</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="prose">
+<p>写回文件的风险和长期记忆一样：错误经验会污染以后所有任务，被注入的内容也可能借此长期驻留（第 13 章）。工程上的做法：每次更新都留版本；更新要在<b>另一个任务</b>上验证有效才保留，避免只对这一次有用；来路不明的 skill 先审再用。</p>
+</div>
+<details class="term" data-term="selfevolve"><summary><b>Skill 自进化</b><span class="st hot">正流行</span><span class="one">把验证过的经验写回 skill 和记忆文件</span></summary><div class="tb">
+<ul class="tl">
+<li><time>2023-05</time><span>Voyager 在《我的世界》里让 agent 把成功的动作写成代码技能库，后续任务直接调用，这是“技能库”思路的早期代表。</span></li>
+<li><time>2025-10</time><span>Skills 成为标准格式后，让 agent 自己写、自己改 skill 变得很自然。</span></li>
+<li><time>2026</time><span>出现专门做 skill 检索、修复、派生和版本管理的开源项目，“自进化”成为 agent 课程和研究的独立主题。</span></li>
+</ul>
+<p class="rel"><b>和其他词的关系：</b>它和强化学习是同一个回路（尝试 → 验证 → 改进），只是改的是文件而不是权重，所以更快、可读、可回滚，也更容易被污染。</p>
+</div></details>
+<h3><span class="lv l3">深入</span>pi 怎么在核心之外实现它们</h3>
+<details class="ref"><summary><b>pi 的做法</b><span class="pt">子 agent 就是再起一个 pi 子进程；计划模式是一个禁用写工具的扩展。</span><span class="pf">examples/extensions/subagent · examples/extensions/plan-mode</span></summary><div class="pb">
+<ul>
+<li><b>子 agent = 子进程：</b>每次调用子 agent，扩展都 <code>spawn</code> 一个新的 <code>pi --mode json -p --no-session</code> 进程，逐行解析它的 JSON 事件流。上下文天然隔离，崩溃也互不影响；中止时 Ctrl+C 会传播并杀掉子进程。</li>
+<li><b>角色用 Markdown 定义：</b><code>scout</code>（快速侦察，返回压缩后的上下文）、<code>planner</code>（出计划）、<code>reviewer</code>（审查）、<code>worker</code>（全能执行）。</li>
+<li><b>流水线用模板串起来：</b><code>implement</code> = scout → planner → worker；<code>implement-and-review</code> = worker → reviewer → worker。</li>
+<li><b>计划模式：</b>禁用 edit / write，bash 只允许只读命令白名单；从回复里的 <code>Plan:</code> 段提取编号步骤，执行时用 <code>[DONE:n]</code> 标记追踪进度，状态随会话持久化。</li>
+</ul>
+<p>这说明了一个架构观点：<b>只要核心提供“事件 + 工具注册 + 进程级复用”，规划和多 agent 都可以作为插件实现</b>，不必塞进内核。</p>
+</div></details>
+<div class="qa-wrap">
+<div class="qa-head"><span>想一想</span><button class="linkbtn" data-toggle-qa>全部展开</button></div>
+<details class="qa"><summary>什么时候该用多 agent？</summary><div class="ans">
+<ul>
+<li>子任务独立、可并行、会产生大量中间信息时用。</li>
+<li>强耦合、需要共享大量上下文时不用。</li>
+<li>工程要点：子 agent 的输入输出要有契约，限制它的工具和预算；子 agent 用进程或独立会话隔离。</li>
+</ul>
+<div class="follow"><b>再深一步：</b>子 agent 用进程隔离还是线程内隔离？→ 进程隔离更稳（崩溃、内存都隔开），可以直接复用 CLI 的 JSON 模式；代价是启动开销和序列化。pi 选择了进程。注意：普通子进程和父进程用同一个系统账户，文件和网络权限并没有隔开；要隔离权限，还得加沙箱、容器或独立账户（第 13 章）。</div>
+</div></details>
+<details class="qa"><summary>一个任务要跑好几个小时，跨了多次上下文窗口，怎么保证不跑偏？</summary><div class="ans">
+<ul>
+<li>把状态放在上下文之外：功能清单（JSON）、进度日志、git 提交历史。</li>
+<li>每个会话固定开场：读进度 → 冒烟测试 → 只做一项 → 端到端验证 → 提交。</li>
+<li>完成的判定交给测试，而不是模型的自我宣布。</li>
+</ul>
+</div></details>
+</div>
+<div class="ahead"><b class="h">前瞻 · 本章</b><ul>
+<li><span class="cf sure">已有证据</span>多家厂商的实践建议都把“给 agent 一个验证手段”列为提升成功率最有效的手段之一。任务越长，越不能靠人一直看着，它的分量只会更重。</li>
+<li><span class="cf sure">已有证据</span>公开的工程文章（Anthropic、Cognition 等）多把子 agent 的价值归于上下文隔离和并行；“产品经理 + 程序员”式的角色扮演分工在 coding agent 产品里已经少见。</li>
+<li><span class="cf likely">作者判断</span>强制规划、强制更新待办清单这类脚手架会变薄。Claude Code 团队提过，一个防止模型“谎称重构完成”的 todo 强制机制，在他们的新模型上已经没有必要；这是单一团队、单一模型的观察，换模型前仍要评测。用文件记录进度、用测试判定完成这类外部状态不会变薄。</li>
+<li><span class="cf likely">作者判断</span>多个 agent 并行干活、人来分派和验收会成为常见工作方式，配套的是 worktree 隔离、任务队列和 review 流程（第 17 章）。</li>
+<li><span class="cf likely">作者判断</span>agent 把经验写回 skill 和记忆会普及，配套的是版本、跨任务验证和审核，和代码合并的流程越来越像。</li>
+<li><span class="cf open">有争议</span>分工的决策会多大程度被训练进模型。已有厂商在训练协调者，效果还有待更多验证。</li>
+</ul>
+</div>
+<div class="selftest" data-quiz>
+<div class="qa-head"><span>自测</span><span class="score">3 题</span></div>
+<div>
+<div class="q" data-a="1"><div class="qt">1. 两个子 agent 都报告“完成”，用户还是登录不了。最可能的原因和对策？</div><div class="opts"><button class="opt">模型不够强，换更大的模型</button><button class="opt">接口约定不一致；先定契约，并在汇总那一层跑端到端测试</button><button class="opt">子 agent 太少，再加一个</button></div><div class="why" hidden><span class="verdict"></span>各自的验证都通过了，整体仍然是错的；判断完成的验证器要放在“合”的那一层。</div></div>
+<div class="q" data-a="1"><div class="qt">2. pi 的子 agent 示例是怎么隔离上下文的？</div><div class="opts"><button class="opt">同一进程内新建 Agent 对象</button><button class="opt">为每个子 agent 启动一个独立的 pi 进程（JSON 模式）</button><button class="opt">共享上下文</button></div><div class="why" hidden><span class="verdict"></span>进程隔离：上下文、内存、崩溃都分开，Ctrl+C 会传播。但子进程和父进程用同一个系统账户，文件和网络权限并没有隔开。</div></div>
+<div class="q" data-a="1"><div class="qt">3. 长时任务跨多个上下文窗口，Anthropic 推荐的做法是？</div><div class="opts"><button class="opt">把上下文窗口调到最大</button><button class="opt">用功能清单、进度文件和 git 保存状态，每个会话只做一项并验证</button><button class="opt">每个会话从头重新开始</button></div><div class="why" hidden><span class="verdict"></span>把记忆从上下文搬到文件和 git 里；完成与否交给测试判定。</div></div>
+</div>
+</div>
+<label class="understood"><input type="checkbox" data-done="c9"> 我能判断何时用多 agent，并讲清 pi 子 agent 的实现</label>
 </section>
+
 <nav class="pager" id="pager"></nav>
+<footer>本手册以开源项目 <a href="https://github.com/earendil-works/pi" target="_blank" rel="noopener">pi</a> 为例讲解 agent 的原理和工程做法。文中的 pi 源码以 commit <a href="https://github.com/earendil-works/pi/tree/cdaf6c227d4718a72b59ccd02152c9614df44cfc" target="_blank" rel="noopener">cdaf6c2</a>（2026-10-11）为准，之后的版本可能有出入；行业动态和趋势判断同样截至 2026 年 10 月。标注“示意”的代码只用来说明概念。如有错漏，欢迎在 <a href="https://github.com/Jerremiz/agent-notes/issues" target="_blank" rel="noopener">GitHub 提 issue</a> 或直接<a href="https://github.com/Jerremiz/agent-notes/pulls" target="_blank" rel="noopener">提交 PR</a>，一起完善这本手册。</footer>
 </main>
 </div>
 <script src="assets/book.js"></script>
-<script src="assets/guide.js"></script>
+<script src="assets/agent.js"></script>
+<script src="assets/demos/agent-loop-sim.js"></script>
+<script src="assets/demos/context-budget.js"></script>
+<script src="assets/demos/prompt-builder.js"></script>
+<script src="assets/demos/edit-match.js"></script>
+<script src="assets/demos/session-tree.js"></script>
+<script src="assets/demos/hook-sim.js"></script>
+<script src="assets/shell.js"></script>
 </body>
 </html>
