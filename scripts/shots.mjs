@@ -101,6 +101,8 @@ async function shoot(name){
         /* 顶部一屏 + 各区块 */
         await p.screenshot({ ...SHOT, path: join(dir, '_top.png') }); count++;
         const blocks = await mark(p);
+        /* 第一个配置时导出每个区块的文字，供 compare 逐字比对（各配置文字相同） */
+        if (config === configs[0]) await dumpText(p, join(out, 'text', page));
         for (const b of blocks){ await shotEl(p, `[data-shot="${b}"]`, join(dir, b + '.png'), e => add(page, config, 'shot-failed', `${b}：${e.message}`)); count++; }
 
         /* 展开所有问答、名词卡、参考实现 */
@@ -191,6 +193,18 @@ function mark(p){
     add(document.querySelector('main > footer, footer'), 'footer');
     return names;
   });
+}
+
+/* 每个区块的文字（textContent，去掉脚本和样式），空白合并成一个空格，按句子分行，方便逐字 diff */
+async function dumpText(p, dir){
+  mkdirSync(dir, { recursive: true });
+  const texts = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-shot]')].map(e => {
+    const c = e.cloneNode(true);
+    c.querySelectorAll('script,style').forEach(x => x.remove());
+    return [e.dataset.shot, c.textContent];
+  })));
+  for (const [k, t] of Object.entries(texts))
+    writeFileSync(join(dir, k + '.txt'), t.replace(/\s+/g, ' ').trim().replace(/([。！？；])\s*/g, '$1\n') + '\n');
 }
 
 /* 执行操作，返回内容有变化的区块名 */
@@ -356,13 +370,18 @@ async function compare(a, b){
   const ka = new Set(ra.map(key)), kb = new Set(rb.map(key));
   const newProblems = rb.filter(x => !ka.has(key(x))), gone = ra.filter(x => !kb.has(key(x)));
 
-  writeFileSync(join(out, 'index.html'), page({ a, b, ma, mb, warn, same, changed, missing, added, newProblems, gone, A, B, out }));
+  const text = textDiff(join(A, 'text'), join(B, 'text'));
+  writeFileSync(join(out, 'index.html'), page({ a, b, ma, mb, warn, same, changed, missing, added, newProblems, gone, A, B, out, text }));
   console.log(`compare：相同 ${same}，有变化 ${changed.length}（其中细微 ${changed.filter(c => c.thin).length}），缺少 ${missing.length}，新增 ${added.length}；新问题 ${newProblems.length}，消失的问题 ${gone.length}`);
   warn.forEach(w => console.log('注意：' + w));
   for (const c of changed) console.log(`  ${c.thin ? '细微' : '变化'} ${c.file}  ${c.size ? '尺寸 ' + c.size : c.pixels + ' 像素'}`);
   for (const f of missing) console.log('  缺少 ' + f);
   for (const f of added) console.log('  新增 ' + f);
   if (newProblems.length){ console.log('新出现的问题：'); printProblems(newProblems); }
+  if (text){
+    console.log(`文字：${text.length ? text.length + ' 个区块有改动' : '没有改动'}`);
+    for (const t of text) console.log(`  ${t.file}  ${t.status}`);
+  } else console.log('文字：有一次截图没有导出文字，跳过');
   console.log('报告：' + relative(ROOT, join(out, 'index.html')));
 }
 
@@ -412,7 +431,27 @@ function cut(png, x, y, w, h){
   return out;
 }
 
-function page({ a, b, ma, mb, warn, same, changed, missing, added, newProblems, gone, A, B, out }){
+/* 用 git diff --no-index 逐字比对两次导出的文字。返回每个有改动的文件和带 [-删-]{+增+} 标记的片段 */
+function textDiff(da, db){
+  if (!existsSync(da) || !existsSync(db)) return null;
+  let raw = '';
+  const rel = d => relative(SHOTS, d).split(sep).join('/');
+  const git = ['-c', 'core.autocrlf=false', '-c', 'core.safecrlf=false', '-c', 'core.quotepath=off', 'diff', '--no-index', '--no-color', '--word-diff=plain', '--word-diff-regex=[^[:space:]]', '-U1', rel(da), rel(db)];
+  try { raw = execFileSync('git', git, { cwd: SHOTS, maxBuffer: 64 << 20, stdio: ['ignore', 'pipe', 'pipe'] }).toString(); }
+  catch (e){ if (e.status !== 1) throw e; raw = e.stdout.toString(); }
+  const out = [];
+  for (const part of raw.split(/^diff --git /m).slice(1)){
+    const m = /^--- (?:a\/)?(.+)$/m.exec(part), n = /^\+\+\+ (?:b\/)?(.+)$/m.exec(part);
+    const fa = m && m[1] !== '/dev/null' ? m[1] : null, fb = n && n[1] !== '/dev/null' ? n[1] : null;
+    const name = (fb || fa).replace(/\\/g, '/').split('/text/').pop();
+    const status = !fa ? '新增' : !fb ? '缺少' : '有改动';
+    const body = part.split(/^@@.*@@.*$/m).slice(1).join('\n…\n').trim();
+    out.push({ file: name, status, body });
+  }
+  return out;
+}
+
+function page({ a, b, ma, mb, warn, same, changed, missing, added, newProblems, gone, A, B, out, text }){
   const e = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const rel = p => e(relative(out, p).split(sep).join('/'));
   const probs = l => l.length ? '<ul>' + l.map(x => `<li><code>${e(x.kind)}</code> ${e(x.page)}：${e(x.detail)}</li>`).join('') + '</ul>' : '<p class="muted">无</p>';
@@ -437,12 +476,16 @@ h1{font-size:1.4rem;margin:0 0 4px}h2{font-size:1.1rem;margin:32px 0 8px;border-
 .trio img{width:100%;height:auto;border:1px solid var(--line);background:#fff}
 @media (max-width:800px){.trio{grid-template-columns:1fr}}
 code{font-size:.85em}
+.wd{white-space:pre-wrap;word-break:break-all;font-size:.85rem;max-height:480px;overflow:auto;background:var(--card);padding:8px;border-radius:6px}
+del{background:color-mix(in srgb,var(--bad) 25%,transparent);text-decoration:line-through}ins{background:color-mix(in srgb,#2e9d57 30%,transparent);text-decoration:none}
 </style></head><body><main>
 <h1>截图对比：${e(a)} → ${e(b)}</h1>
 <p class="muted">${e(a)}：${e(ma.time)} · ${e(ma.book)} · 主题 ${e(ma.theme)}<br>${e(b)}：${e(mb.time)} · ${e(mb.book)} · 主题 ${e(mb.theme)}<br>${e(mb.browser)} · ${e(mb.platform)}</p>
 ${warn.map(w => `<p class="warn">注意：${e(w)}</p>`).join('')}
 <div class="stats"><div><b>${same}</b>相同</div><div><b>${big.length}</b>有变化</div><div><b>${thin.length}</b>细微</div><div><b>${missing.length}</b>缺少</div><div><b>${added.length}</b>新增</div><div><b>${newProblems.length}</b>新问题</div></div>
 <h2>新出现的问题</h2>${probs(newProblems)}
+<h2>文字改动（${text ? text.length : '未比对'}）</h2>
+${!text ? '<p class="muted">有一次截图没有导出文字</p>' : text.length ? text.map(t => `<div class="item"><h3>${e(t.file)} · ${e(t.status)}</h3><pre class="wd">${e(t.body).replace(/\[-([\s\S]*?)-\]/g, '<del>$1</del>').replace(/\{\+([\s\S]*?)\+\}/g, '<ins>$1</ins>')}</pre></div>`).join('') : '<p class="muted">无：所有区块的文字逐字相同</p>'}
 <h2>有变化（${big.length}）</h2>
 ${items(big)}
 <h2>细微差异（${thin.length}）</h2>
