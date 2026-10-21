@@ -152,7 +152,7 @@
 <div class="selftest" data-quiz>
 <div class="qa-head"><span>自测</span><span class="score">1 题</span></div>
 <div>
-<div class="q" data-a="1"><div class="qt">平台里有个任务在等人审批，worker 应该怎么办？</div><div class="opts"><button class="opt">一直占着等审批结果</button><button class="opt">把任务持久化后释放 worker，审批结果作为事件重新入队</button><button class="opt">为了不卡住，直接拒绝敏感操作</button></div><div class="why" hidden data-w="等待不该占着 worker；审批回来后，任何 worker 都能从事件日志接着跑。但沙箱不会自动消失：短等待保留（带租约和过期时间），长等待先把未提交的修改快照，再释放沙箱。"></div></div>
+<div class="q" data-a="1"><div class="qt">平台里有个任务在等人审批，worker 应该怎么办？</div><div class="opts"><button class="opt">一直占着等审批结果</button><button class="opt">把任务持久化后释放 worker，审批结果作为事件重新入队</button><button class="opt">为了不卡住，直接拒绝敏感操作</button></div><div class="why" hidden><span class="verdict"></span>等待不该占着 worker；审批回来后，任何 worker 都能从事件日志接着跑。但沙箱不会自动消失：短等待保留（带租约和过期时间），长等待先把未提交的修改快照，再释放沙箱。</div></div>
 </div>
 </div>
 <label class="understood"><input type="checkbox" data-done="c17"> 我能独立讲完这个设计，并把每个深挖点对应到前面的章节</label>

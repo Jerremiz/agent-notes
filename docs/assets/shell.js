@@ -150,7 +150,7 @@
       const a = +q.dataset.a, why = q.querySelector('.why'), opts = [...q.querySelectorAll('.opt')];
       opts.forEach((b, j) => b.addEventListener('click', () => {
         opts.forEach((o, k) => { o.disabled = true; if (k === a) o.classList.add('right'); else if (k === j) o.classList.add('wrong'); });
-        why.textContent = (j === a ? '答对了。' : '再想想。') + why.dataset.w;
+        why.querySelector('.verdict').textContent = j === a ? '答对了。' : '再想想。';
         why.hidden = false;
         n++; if (j === a) right++;
         score.textContent = '答对 ' + right + ' / ' + qs.length;
