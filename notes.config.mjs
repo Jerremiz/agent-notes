@@ -9,10 +9,9 @@ export default {
   out: 'docs',
 
   styles: ['assets/agent.css'],
-  scripts: ['assets/agent.js', 'assets/demos/agent-loop-sim.js', 'assets/demos/context-budget.js', 'assets/demos/prompt-builder.js', 'assets/demos/edit-match.js', 'assets/demos/session-tree.js', 'assets/demos/hook-sim.js'],   // 演示一个文件一个，页面里没有对应演示时不做事
+  scripts: ['assets/agent.js', 'assets/demos/essence-map.js', 'assets/demos/agent-loop-sim.js', 'assets/demos/context-budget.js', 'assets/demos/prompt-builder.js', 'assets/demos/edit-match.js', 'assets/demos/session-tree.js', 'assets/demos/hook-sim.js'],   // 演示一个文件一个，页面里没有对应演示时不做事
   copy: {
-    'assets': 'assets',
-    'legacy': ''          // 迁移期间：还没转成 Markdown 的页面原样复制。全部迁移完删掉这一行和 legacy/ 目录
+    'assets': 'assets'
   },
 
   importance: { must: { label: '核心' }, often: { label: '重要' }, plus: { label: '延伸' }, aux: { label: '练习', title: '练习 / 参考' } },
@@ -29,7 +28,7 @@ export default {
   },
   /* 页面顺序就是翻页顺序。legacy: true 的页面还是手写 HTML，放在 legacy/ 里 */
   pages: [
-    { file: 'index', title: '首页', legacy: true },
+    { file: 'index', title: '首页', plain: true },   // 普通页面：hero 和导读的版式写在 content/index/ 里
     { file: 'part1', title: '原理', part: '原理' },
     { file: 'part2', title: '工程化', part: '工程' },
     { file: 'part3', title: '综合', part: '综合' }

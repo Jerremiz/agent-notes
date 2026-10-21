@@ -84,7 +84,10 @@
 
 ### 4. 首页接入统一模板，删掉旧机制
 
-- [ ] 生成器支持普通页面（首页）进统一模板；本质地图脚本搬出 `guide.js`。
+- [x] 生成器支持普通页面（首页）进统一模板；本质地图脚本搬出 `guide.js`。
+  - 主题：`pages` 里 `plain: true`，`content/<页面>/` 每个文件一节（front matter 只有 `id`、`eyebrow`、`title`、`class`，包成 `section.home-sec`；没有 front matter 的原样输出，hero 写在 `content/index/00-hero.md`），不编章号、不进目录数据。
+  - 书：`content/index/` 三个文件；本质地图 `widgets/essence-map.html` + `assets/demos/essence-map.js`（从 guide.js 原样搬来），目录栏“本质地图”下的七个问题改用 shell.js 的 `NOTES.subs` 扩展点注册。`copy` 里的 legacy 规则已去掉（否则旧 index.html 会和生成的首页冲突）。
+  - 验收（`compare baseline home-a`、`home-b`）：hero、顶部一屏、目录栏截图不变，目录栏文字逐字一致，`book.js` 未变，检查零问题，地图两种视图和筛选都能用。差异：两个“示范”框的标签旧页面写成行内 `span.tag`，现在和全书其他类比框统一成 `div.tag`，“怎么学”一节矮了 15 像素；其余是亚像素偏移。
 - [ ] 删除 `legacy/`、`legacyChapters`、`copy` 里的 legacy 规则、旧 CSS/JS —— **删除前先列清单给用户确认**。
 
 ### 5. 整理 notes-theme 第一版
