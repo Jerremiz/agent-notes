@@ -23,7 +23,9 @@
 - [x] 主题继续独立仓库，还是放进 agent-notes 当 `packages/notes-theme`？（倾向独立仓库；代价是主题发布前 `md-pilot` 不能合并上线）
   - 结论（2026-10-21）：**继续独立仓库** `E:\repo\notes-theme`。接受代价：主题发布 `v0.1.0` 之前，`md-pilot` 不合并上线。
 - [ ] edit 匹配演示改成静态表格？会话树改成静态图？（等价迁移之后再定）
-- [ ] `::: analogy` 去留（书里没用，styleguide 有示例）
+- [x] `::: analogy` 去留（书里没用，styleguide 有示例）
+  - 结论：保留。旧页面的“Java 类比”框（`div.java`）就是它，第二部分已经在用。
+- [ ] 名词卡的名称、状态以哪边为准？迁移后跟随 `data/agent.mjs`（和首页本质地图一致），和旧卡片有 5 处不同：hooks“Hooks / Plugins”→“Hooks”、protocols“Agent 协议家族”→“Agent 协议家族（A2A · ACP · AG-UI）”、swebench“SWE-bench、Terminal-Bench 与时间跨度”→“SWE-bench 等基准”；状态 injection“未解决”→“仍在演变”、swebench“更新很快”→“仍在演变”。要保留旧写法，就改 `data/agent.mjs`（首页地图跟着变），或给名词卡加覆盖写法。第一部分迁移时可能还有更多。
 
 ## 步骤
 
@@ -67,6 +69,13 @@
 ### 3. 迁第二部分，再迁第一部分
 
 按 agent-notes 的 AGENTS.md「迁移期间」四步做；演示 JS 拆成独立文件；每页完成后核对全站目录、首页地图和交叉链接。
+
+- [x] 第二部分（2026-10-22，等价迁移）
+  - 用一次性脚本在关掉 JS 的 Chromium 里解析 `legacy/part2.html` 生成 Markdown，再人工审。演示：`widgets/session-tree.html`、`widgets/hook-sim.html`，脚本 `assets/demos/session-tree.js`、`hook-sim.js`（从 guide.js 原样搬来）。guide.js 里这两段和第二部分的 9 道自测题已删。
+  - 主题为此新增：`sql` 高亮；组件参数末尾 `{open}`（`term`、`ref`、`q` 默认展开，旧页面里 MCP 名词卡是默认展开的）。
+  - 验收（`compare baseline part2-b`）：`book.js` 一字未改（章号、目录、所属问题）；正文逐字一致；目录栏、首页、第一和第三部分截图不变；链接、锚点、重复 id、控制台检查零问题；两个演示都能操作，会话树截图逐像素一致。
+  - 有意保留的差异：① 3 个名词卡的名称和 2 个状态标签改为跟随 `data/agent.mjs`（hooks、protocols、swebench 的名称；injection、swebench 的状态），因为主题的名词卡只从名词表取这些信息——**待用户确认**，见“待决定”；② 两个 `text` 代码块（事件序列、恢复顺序）里 `← …` 注释不再是灰色；③ 代码高亮改由主题生成，`undefined`、对象键 `type:` 等也会上色；④ 新增页脚（旧页面没有）；⑤ 文字抗锯齿和亚像素偏移。
+- [ ] 第一部分
 
 ### 4. 首页接入统一模板，删掉旧机制
 
