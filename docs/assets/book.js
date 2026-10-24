@@ -4,7 +4,28 @@ window.BOOK = {
   "title": "看懂 Agent",
   "tagline": "词会过时，问题不会",
   "repo": "https://github.com/Jerremiz/agent-notes",
-  "storageKey": "harness-guide-done"
+  "storageKey": "harness-guide-done",
+  "labels": {
+   "toc": "章节",
+   "progressStart": "已掌握 0 章",
+   "progress": "已掌握 {done} / {total} 章",
+   "prev": "上一部分",
+   "next": "下一部分",
+   "chapter": "第 {n} 章",
+   "qa": "想一想",
+   "expandAll": "全部展开",
+   "collapseAll": "全部收起",
+   "quiz": "自测",
+   "quizCount": "{n} 题",
+   "quizScore": "答对 {right} / {total}",
+   "right": "答对了。",
+   "wrong": "再想想。",
+   "repo": "共建",
+   "repoTitle": "在 GitHub 上提 issue 或 PR，一起完善手册",
+   "repoAria": "在 GitHub 上参与共建",
+   "termMark": "词",
+   "qaMark": "问"
+  }
  },
  "home": {
   "page": "index",

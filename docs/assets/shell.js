@@ -9,6 +9,9 @@
     set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
   };
   const B = window.BOOK;
+  /* 界面文字来自书的 labels 配置；{n} 之类是占位符 */
+  const L = B.site.labels;
+  const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (m, k) => k in v ? v[k] : m);
   const HOOKS = (window.NOTES = window.NOTES || {}); HOOKS.subs = HOOKS.subs || {};
   const page = (document.querySelector('[data-page]') || { dataset: {} }).dataset.page;
   const isHome = page === B.home.page;
@@ -74,7 +77,7 @@
     B.chapters.forEach(ch => { if (done[ch.id]) c++; });
     document.querySelectorAll('a[data-id]').forEach(a => a.classList.toggle('done', !!done[a.dataset.id]));
     const t = $('#meterText'), f = $('#meterFill');
-    if (t) t.textContent = '已掌握 ' + c + ' / ' + B.chapters.length + ' 章';
+    if (t) t.textContent = fmt(L.progress, { done: c, total: B.chapters.length });
     if (f) f.style.width = (c / B.chapters.length * 100) + '%';
   }
   document.querySelectorAll('[data-done]').forEach(cb => {
@@ -127,8 +130,8 @@
   if (pager){
     const i = B.pages.findIndex(p => p.file === page);
     const link = (p, cls, small, text) => { const a = el('a', cls); a.href = p.file + '.html'; a.appendChild(el('small', null, small)); a.appendChild(el('b', null, text)); pager.appendChild(a); };
-    if (i > 0) link(B.pages[i - 1], 'prev', '上一部分', '← ' + B.pages[i - 1].title);
-    if (i >= 0 && i < B.pages.length - 1) link(B.pages[i + 1], 'next', '下一部分', B.pages[i + 1].title + ' →');
+    if (i > 0) link(B.pages[i - 1], 'prev', L.prev, '← ' + B.pages[i - 1].title);
+    if (i >= 0 && i < B.pages.length - 1) link(B.pages[i + 1], 'next', L.next, B.pages[i + 1].title + ' →');
   }
 
   /* ---------- 问答：全部展开 / 收起 ---------- */
@@ -137,7 +140,7 @@
       const items = btn.closest('.qa-wrap').querySelectorAll('details.qa');
       const open = [...items].some(d => !d.open);
       items.forEach(d => d.open = open);
-      btn.textContent = open ? '全部收起' : '全部展开';
+      btn.textContent = open ? L.collapseAll : L.expandAll;
     });
   });
 
@@ -150,10 +153,10 @@
       const a = +q.dataset.a, why = q.querySelector('.why'), opts = [...q.querySelectorAll('.opt')];
       opts.forEach((b, j) => b.addEventListener('click', () => {
         opts.forEach((o, k) => { o.disabled = true; if (k === a) o.classList.add('right'); else if (k === j) o.classList.add('wrong'); });
-        why.querySelector('.verdict').textContent = j === a ? '答对了。' : '再想想。';
+        why.querySelector('.verdict').textContent = j === a ? L.right : L.wrong;
         why.hidden = false;
         n++; if (j === a) right++;
-        score.textContent = '答对 ' + right + ' / ' + qs.length;
+        score.textContent = fmt(L.quizScore, { right, total: qs.length });
       }, { once: true }));
     });
   });
