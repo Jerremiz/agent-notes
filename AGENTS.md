@@ -2,12 +2,12 @@
 
 ## 结构
 
-- 全书生成一页 `docs/index.html`（读者用 Ctrl+F 搜全书）：`notes.config.mjs` 的 `from` 把 `content/index`、`principles`（原理）、`engineering`（工程化）、`synthesis`（综合）按顺序拼起来。正文一章一个 Markdown 文件。组件写法见 notes-theme 的 README 和 styleguide。
+- 正文在 `content/<部分目录>/`，一章一个 Markdown 文件。组件写法见 notes-theme 的 README 和 styleguide。
 - `docs/` 是生成结果，**不要手改**；改完内容运行 `npm run build`，连同 `docs/` 一起提交。
 - 本地预览：`npm run dev`，打开 http://127.0.0.1:4000（只监听本机）。
-- 上线：Vercel 发布 `main` 分支的 `docs/`（项目设置 Root Directory = `docs`、Framework = Other，不安装、不构建）。推到 `main` 就是上线，几秒生效。
-- 主题：依赖锁在 `github:Jerremiz/notes-theme#vX.Y.Z`。同时改主题和书时，在本仓库执行 `npm link ../notes-theme` 联调；主题发了新版本，再把依赖改成新 tag、`npm install`，连同锁文件提交。
-- `storageKey` 和章节 `id` 是读者阅读进度的键，发布后不要改。以后要拆回多页（gzip 后几百 KB、元素一两万个以上、手机明显变慢时），旧锚点要有去处。
+- 推到 `main` 就是上线（发布的是 `docs/`）。
+- 同时改主题和书时，用 `npm link ../notes-theme` 联调，不要改 `node_modules`；升级主题改依赖里的 tag 后 `npm install`，连同锁文件提交。
+- `notes.config.mjs` 的 `storageKey` 发布后不要改，改了读者的阅读进度会清零。
 - 名词、七个问题、五层在 `data/agent.mjs`；书的配置在 `notes.config.mjs`。
 - 本书专用的样式和交互在 `assets/agent.css`、`assets/agent.js`，交互演示在 `widgets/` 和 `assets/demos/`；通用的东西改 notes-theme，不在这里覆盖主题样式。
 
@@ -25,7 +25,7 @@
 - `scripts/shots.mjs` 截图并检查（控制台报错、404、外部请求、重复 id、站内链接和锚点），`scripts/shots.config.mjs` 是交互演示的操作清单。用法写在脚本开头。
 - 第一次用先装浏览器：`npx playwright install chromium`（版本跟着 `package.json` 里锁定的 playwright）。
 - 截图存在 `shots/`，不提交。基线只能和同一平台、同一浏览器版本拍的截图比；换了机器或升级了 playwright，先用改动前的提交重拍基线。
-- 一次全量截图约 240 MB，对比报告也差不多大。对比看完、改动提交以后就删掉这次的截图和 `compare-*`，最多留一份最新的基线；需要时随时能用任意提交重拍。
+- 改动提交以后删掉这次的截图和 `compare-*`，最多留一份最新的基线（需要时可以用任意提交重拍）。
 - 同一份产物重拍应当零差异。“细微差异”是 1–3 像素宽的线，多半是渲染抖动，但也要看一眼。
 
 ## 写作口径
