@@ -28,7 +28,8 @@
 - [x] 名词卡的名称、状态以哪边为准？迁移后跟随 `data/agent.mjs`（和首页本质地图一致），和旧卡片有 5 处不同：hooks“Hooks / Plugins”→“Hooks”、protocols“Agent 协议家族”→“Agent 协议家族（A2A · ACP · AG-UI）”、swebench“SWE-bench、Terminal-Bench 与时间跨度”→“SWE-bench 等基准”；状态 injection“未解决”→“仍在演变”、swebench“更新很快”→“仍在演变”。要保留旧写法，就改 `data/agent.mjs`（首页地图跟着变），或给名词卡加覆盖写法。第一部分迁移时可能还有更多。
   - 结论（2026-10-22）：**维持现状，以 `data/agent.mjs` 为准**（和首页本质地图一致）。旧卡片上的写法不保留；第一部分照此处理。
 
-- [ ] notes-theme 里对 `legacy: true` 页面和 `legacyChapters` 的支持删不删？只用于手写 HTML 页面渐进迁移；agent-notes 已不再使用，在现有主题上继续改或写第二本书都用不到。（建议删，等用户确认）
+- [x] notes-theme 里对 `legacy: true` 页面和 `legacyChapters` 的支持删不删？只用于手写 HTML 页面渐进迁移；agent-notes 已不再使用，在现有主题上继续改或写第二本书都用不到。
+  - 结论（2026-10-24）：**删了**。配置里再写 `legacy: true` 或 `legacyChapters` 会明确报“已不再支持”；`pages` 每项只认 `file`、`title`、`part`、`plain`。
 - [ ] 是否把全书合成一个 HTML（目前分 index / part1 / part2 / part3 四页，页面之间有目录栏、翻页和正文里 19 个跨页链接）？用户要求**上线（第 6 步）之前讨论**。要考虑：旧网址 `partN.html#cN` 怎么转到新地址（GitHub Pages 只能靠静态小页面加脚本跳转）、主题生成器和目录栏 / 翻页要怎么改、部分标题是否保留为目录分组。阅读进度按章 id 存，不受影响。
 
 ## 步骤
