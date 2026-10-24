@@ -1,5 +1,5 @@
 /* 看懂 Agent · 演示：本质地图（widgets/essence-map.html，首页）
-   从 legacy/assets/guide.js 原样搬来，逻辑未改；顶部的辅助函数也是从 guide.js 原样复制的（agent.js 里的 qChip 在它自己的作用域里）。
+   迁移时从旧页面的 legacy/assets/guide.js 原样搬来（该文件已删，见 git 历史），逻辑未改；顶部的辅助函数也是从 guide.js 原样复制的（agent.js 里的 qChip 在它自己的作用域里）。
    页面里没有地图时什么也不做。必须在 shell.js 之前执行：地图生成的 #q1…#q7 是目录栏和问题标签的跳转目标。 */
 (function(){
   const $ = s => document.querySelector(s);

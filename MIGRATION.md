@@ -28,6 +28,9 @@
 - [x] 名词卡的名称、状态以哪边为准？迁移后跟随 `data/agent.mjs`（和首页本质地图一致），和旧卡片有 5 处不同：hooks“Hooks / Plugins”→“Hooks”、protocols“Agent 协议家族”→“Agent 协议家族（A2A · ACP · AG-UI）”、swebench“SWE-bench、Terminal-Bench 与时间跨度”→“SWE-bench 等基准”；状态 injection“未解决”→“仍在演变”、swebench“更新很快”→“仍在演变”。要保留旧写法，就改 `data/agent.mjs`（首页地图跟着变），或给名词卡加覆盖写法。第一部分迁移时可能还有更多。
   - 结论（2026-10-22）：**维持现状，以 `data/agent.mjs` 为准**（和首页本质地图一致）。旧卡片上的写法不保留；第一部分照此处理。
 
+- [ ] notes-theme 里对 `legacy: true` 页面和 `legacyChapters` 的支持删不删？只用于手写 HTML 页面渐进迁移；agent-notes 已不再使用，在现有主题上继续改或写第二本书都用不到。（建议删，等用户确认）
+- [ ] 是否把全书合成一个 HTML（目前分 index / part1 / part2 / part3 四页，页面之间有目录栏、翻页和正文里 19 个跨页链接）？用户要求**上线（第 6 步）之前讨论**。要考虑：旧网址 `partN.html#cN` 怎么转到新地址（GitHub Pages 只能靠静态小页面加脚本跳转）、主题生成器和目录栏 / 翻页要怎么改、部分标题是否保留为目录分组。阅读进度按章 id 存，不受影响。
+
 ## 步骤
 
 ### 1. 修 notes-theme 的基础问题，补小型回归测试
@@ -88,7 +91,10 @@
   - 主题：`pages` 里 `plain: true`，`content/<页面>/` 每个文件一节（front matter 只有 `id`、`eyebrow`、`title`、`class`，包成 `section.home-sec`；没有 front matter 的原样输出，hero 写在 `content/index/00-hero.md`），不编章号、不进目录数据。
   - 书：`content/index/` 三个文件；本质地图 `widgets/essence-map.html` + `assets/demos/essence-map.js`（从 guide.js 原样搬来），目录栏“本质地图”下的七个问题改用 shell.js 的 `NOTES.subs` 扩展点注册。`copy` 里的 legacy 规则已去掉（否则旧 index.html 会和生成的首页冲突）。
   - 验收（`compare baseline home-a`、`home-b`）：hero、顶部一屏、目录栏截图不变，目录栏文字逐字一致，`book.js` 未变，检查零问题，地图两种视图和筛选都能用。差异：两个“示范”框的标签旧页面写成行内 `span.tag`，现在和全书其他类比框统一成 `div.tag`，“怎么学”一节矮了 15 像素；其余是亚像素偏移。
-- [ ] 删除 `legacy/`、`legacyChapters`、`copy` 里的 legacy 规则、旧 CSS/JS —— **删除前先列清单给用户确认**。
+- [x] 删除 `legacy/`、`legacyChapters`、`copy` 里的 legacy 规则、旧 CSS/JS —— **删除前先列清单给用户确认**。
+  - 2026-10-24 用户确认后删除：`legacy/index.html`、`legacy/assets/guide.js`、`legacy/assets/guide.css`、`legacy/` 目录、`notes.config.mjs` 里的 `legacyChapters` 和相关注释；`copy` 的 legacy 规则在上一项已去掉。AGENTS.md 的“迁移期间”改写成“加内容”。
+  - 删除前确认过：生成的页面里没有任何文件引用 guide.css / guide.js；删除后重新构建，4 个 HTML 和 `book.js` 一字未变。
+  - guide.css 443 条规则：358 条在新 CSS 里一字不差，37 条换了写法；48 条找不到同名选择器的，是改了名（`.pi`→`.ref`、`.java`→`.analogy`）或已无人使用的旧结构（`.three`、`.booktoc`、`.rail a.partlink` 等）。
 
 ### 5. 整理 notes-theme 第一版
 

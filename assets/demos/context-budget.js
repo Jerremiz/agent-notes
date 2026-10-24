@@ -1,5 +1,5 @@
 /* 看懂 Agent · 演示：上下文预算（widgets/context-budget.html）
-   从 legacy/assets/guide.js 原样搬来，逻辑未改。页面里没有这个演示时什么也不做。 */
+   迁移时从旧页面的 legacy/assets/guide.js 原样搬来（该文件已删，见 git 历史），逻辑未改。页面里没有这个演示时什么也不做。 */
 (function(){
   const $ = s => document.querySelector(s);
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
