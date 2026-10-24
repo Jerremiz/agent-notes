@@ -1,0 +1,6 @@
+# 所有文本文件统一用 LF，不受各人 core.autocrlf 设置影响（生成的 docs/ 要能逐字节重现）
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.webp binary
+*.woff2 binary
