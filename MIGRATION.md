@@ -122,7 +122,8 @@
 
 ### 6. 发布和上线
 
-- [ ] 建 GitHub 仓库、推送、打 `v0.2.0`（全书一页用到了 0.2.0 的 `from`，`v0.1.0` 从没发布过）；agent-notes 改依赖 `github:Jerremiz/notes-theme#v0.2.0`，提交完整锁文件。
+- [x] 建 GitHub 仓库、推送、打 `v0.2.0`（全书一页用到了 0.2.0 的 `from`，`v0.1.0` 从没发布过）；agent-notes 改依赖 `github:Jerremiz/notes-theme#v0.2.0`，提交完整锁文件。
+  - 2026-10-25：`github.com/Jerremiz/notes-theme`（公开），`migration` 快进合并到 `main`，只推了 `main` 和 `v0.2.0`。agent-notes 改用 `github:` 依赖后重新构建，`docs/` 一字未变。
 - [ ] 合并 `md-pilot`，上线。现在线上是 Vercel 直接发布 `main` 的仓库根目录（`index.html`、`part1–3.html`）；合并后产物在 `docs/`：
   - Vercel 项目设置里 Root Directory 改成 `docs`（Framework 选 Other，不构建）。不要让 Vercel 跑 `npm install`：依赖里的 `file:../notes-theme` 在 Vercel 上装不了，改成 `github:` 依赖后也没必要。
   - 旧网址 `part1.html`、`part2.html`、`part3.html` 合并后是 404。结论（2026-10-25）：**不做重定向**。
