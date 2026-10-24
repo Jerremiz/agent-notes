@@ -5,6 +5,9 @@
 - 全书生成一页 `docs/index.html`（读者用 Ctrl+F 搜全书）：`notes.config.mjs` 的 `from` 把 `content/index`、`principles`（原理）、`engineering`（工程化）、`synthesis`（综合）按顺序拼起来。正文一章一个 Markdown 文件。组件写法见 notes-theme 的 README 和 styleguide。
 - `docs/` 是生成结果，**不要手改**；改完内容运行 `npm run build`，连同 `docs/` 一起提交。
 - 本地预览：`npm run dev`，打开 http://127.0.0.1:4000（只监听本机）。
+- 上线：Vercel 发布 `main` 分支的 `docs/`（项目设置 Root Directory = `docs`、Framework = Other，不安装、不构建）。推到 `main` 就是上线，几秒生效。
+- 主题：依赖锁在 `github:Jerremiz/notes-theme#vX.Y.Z`。同时改主题和书时，在本仓库执行 `npm link ../notes-theme` 联调；主题发了新版本，再把依赖改成新 tag、`npm install`，连同锁文件提交。
+- `storageKey` 和章节 `id` 是读者阅读进度的键，发布后不要改。以后要拆回多页（gzip 后几百 KB、元素一两万个以上、手机明显变慢时），旧锚点要有去处。
 - 名词、七个问题、五层在 `data/agent.mjs`；书的配置在 `notes.config.mjs`。
 - 本书专用的样式和交互在 `assets/agent.css`、`assets/agent.js`，交互演示在 `widgets/` 和 `assets/demos/`；通用的东西改 notes-theme，不在这里覆盖主题样式。
 
