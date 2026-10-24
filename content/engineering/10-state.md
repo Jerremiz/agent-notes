@@ -74,9 +74,9 @@ create table session_entry (
 ::::
 
 ::: ahead 前瞻 · 本章
-- [已有证据] 状态分成两层并存：会话日志记录“对话发生了什么”，git 和项目文件记录“世界变成了什么样”。Anthropic 的长任务做法两者都用（第 9 章）。
-- [已有证据] 只追加的事件日志是常见设计：Claude Code、Codex CLI、pi 的会话文件都是 JSONL 事件流，都支持恢复会话（见 [Claude Code 文档](https://code.claude.com/docs/en/how-claude-code-works)、Codex 源码 [`rollout/src/recorder.rs`](https://github.com/openai/codex/blob/8c0f7011674145da7e10627769fb221c74fbf7a0/codex-rs/rollout/src/recorder.rs)、pi 的 `docs/session-format.md`）。
-- [作者判断] Temporal 这类持久化执行框架会更多地用来承载 agent：每次模型调用和工具调用都是可重试、可恢复的活动，等审批时不必占着 worker（沙箱等资源怎么保留，见第 17 章）。
+- [现状] 状态分成两层并存：会话日志记录“对话发生了什么”，git 和项目文件记录“世界变成了什么样”。Anthropic 的长任务做法两者都用（第 9 章）。
+- [现状] 只追加的事件日志是常见设计：Claude Code、Codex CLI、pi 的会话文件都是 JSONL 事件流，都支持恢复会话（见 [Claude Code 文档](https://code.claude.com/docs/en/how-claude-code-works)、Codex 源码 [`rollout/src/recorder.rs`](https://github.com/openai/codex/blob/8c0f7011674145da7e10627769fb221c74fbf7a0/codex-rs/rollout/src/recorder.rs)、pi 的 `docs/session-format.md`）。
+- [推测] Temporal 这类持久化执行框架会更多地用来承载 agent：每次模型调用和工具调用都是可重试、可恢复的活动，等审批时不必占着 worker（沙箱等资源怎么保留，见第 17 章）。
 - [有争议] 状态放客户端还是厂商服务端（第 3 章）。个人工具倾向客户端；托管平台倾向服务端。
 :::
 

@@ -134,9 +134,9 @@ RAG 怎么评测（召回率、排序质量、答案是否有出处、出处是�
 ::::
 
 ::: ahead 前瞻 · 本章
-- [已有证据] 在 coding agent 里，文件是长期记忆和项目知识的主要载体：规则文件、skills、进度文件、Anthropic 的 memory tool 都是文件。
-- [已有证据] Claude Code、pi 等 coding agent 以 agentic search 为主。Cursor 现行文档也写明，它的 Agent 用本地的 Instant Grep 加 Explore 子 agent 搜代码，不存储代码库的 embedding（[Cursor 文档](https://cursor.com/docs/agent/tools/search)，2026-10 查阅）。海量文档的知识库问答仍以 RAG 为主。
-- [作者判断] 记忆的自动写入会普及（agent 自己总结经验写进文件），配套的是审核、过期和防污染机制。
+- [现状] 在 coding agent 里，文件是长期记忆和项目知识的主要载体：规则文件、skills、进度文件、Anthropic 的 memory tool 都是文件。
+- [现状] Claude Code、pi 等 coding agent 以 agentic search 为主。Cursor 现行文档也写明，它的 Agent 用本地的 Instant Grep 加 Explore 子 agent 搜代码，不存储代码库的 embedding（[Cursor 文档](https://cursor.com/docs/agent/tools/search)，2026-10 查阅）。海量文档的知识库问答仍以 RAG 为主。
+- [推测] 记忆的自动写入会普及（agent 自己总结经验写进文件），配套的是审核、过期和防污染机制。
 - [有争议] skill 会不会像当年的插件市场一样膨胀失控。格式简单是优点，也意味着质量和安全没有门槛。
 :::
 

@@ -12,5 +12,5 @@
     <label><input type="checkbox" id="bCompact" checked> 开启自动压缩</label>
   </div>
   <div class="status" id="bStatus"></div>
-  <p class="small" style="margin-bottom:0">红线 = 窗口 − <code>reserveTokens</code>（16384，给回复预留），超过就压缩；压缩后保留最近约 <code>keepRecentTokens</code>（20000）。每个 turn 按增加 7k token 估算。</p>
+  <p class="small" style="margin-bottom:0">红线 = 窗口 − <code>reserveTokens</code>（16384，剩余空间低于它就开始压缩），超过就压缩；压缩后保留最近约 <code>keepRecentTokens</code>（20000）。每个 turn 按增加 7k token 估算。</p>
 </div>

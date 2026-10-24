@@ -11,11 +11,11 @@
    ifEnabled：按钮已禁用就跳过这一步。 */
 export default {
   demos: {
+    /* 全书一页，演示都在 index 上 */
     index: [
       { name: 'map-year', shoot: '#map', actions: [{ click: '#emapView .btn', nth: 1 }] },
-      { name: 'map-filter', shoot: '#map', actions: [{ click: '#emapSt .btn', nth: 1 }] }
-    ],
-    part1: [
+      { name: 'map-filter', shoot: '#map', actions: [{ click: '#emapSt .btn', nth: 1 }] },
+      /* 第一部分 */
       { name: 'sim-3', shoot: '#sim', actions: [{ click: '#simNext' }, { click: '#simNext' }, { click: '#simNext' }] },
       { name: 'sim-end', shoot: '#sim', actions: Array.from({ length: 40 }, () => ({ click: '#simNext', ifEnabled: true })) },
       { name: 'sim-reset', shoot: '#sim', actions: [{ click: '#simNext' }, { click: '#simNext' }, { click: '#simPrev' }, { click: '#simReset' }] },
@@ -23,9 +23,8 @@ export default {
       { name: 'budget-compact', shoot: '#bBar', actions: [{ set: '#bTurns', value: '45' }, { check: '#bSkills', on: true }] },
       { name: 'prompt-all', shoot: '#pbOut', actions: ['#pbAgents', '#pbAppend', '#pbSkills', '#pbSearch', '#pbSystem'].map(s => ({ check: s, on: true })) },
       { name: 'prompt-none', shoot: '#pbOut', actions: ['#pbAgents', '#pbAppend', '#pbSkills', '#pbSearch', '#pbSystem'].map(s => ({ check: s, on: false })) },
-      ...[0, 1, 2, 3, 4, 5].map(i => ({ name: 'edit-' + i, shoot: '#emOut', optional: i > 1, actions: [{ click: '#emCases .btn', nth: i }] }))
-    ],
-    part2: [
+      ...[0, 1, 2, 3, 4, 5].map(i => ({ name: 'edit-' + i, shoot: '#emOut', optional: i > 1, actions: [{ click: '#emCases .btn', nth: i }] })),
+      /* 第二部分 */
       { name: 'tree-0', shoot: '#treeSvg', actions: [{ click: '#treeSvg .node', nth: 0 }] },
       { name: 'tree-3', shoot: '#treeSvg', actions: [{ click: '#treeSvg .node', nth: 3 }] },
       { name: 'tree-last', shoot: '#treeSvg', actions: [{ click: '#treeSvg .node', nth: -1 }] },

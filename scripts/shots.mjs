@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* 截图和交互对比：迁移一页前后各拍一次，再对比。
 
-   npm run shots -- shoot <名字> [--pages index,part1] [--configs desktop-light,mobile-dark]
+   npm run shots -- shoot <名字> [--pages index] [--configs desktop-light,mobile-dark]
      对 docs/ 里现有的产物截图（先 npm run build），存到 shots/<名字>/。
      桌面、手机 × 浅色、深色；每个配置都是全新的浏览器上下文（localStorage 为空），等字体加载完再截。
      截什么：每页顶部一屏；目录栏、每个章节 / 部分标题 / 首页区块、翻页、页脚（按元素 id 命名）；
@@ -38,7 +38,8 @@ const CONFIGS = {
 };
 const COMMON = { locale: 'zh-CN', timezoneId: 'Asia/Shanghai', reducedMotion: 'reduce' };
 const SHOT = { animations: 'disabled', caret: 'hide', timeout: 15000 };
-const UNSTICK = 'nav.rail{position:static!important}';
+/* 截元素时：吸顶的目录栏和手机顶部细条改成 static（它们在文档流里本来就占这个位置，不影响布局），免得盖住元素 */
+const UNSTICK = 'nav.rail,.mbar{position:static!important;transform:none!important}';
 
 const [cmd, ...rest] = process.argv.slice(2);
 const opts = {}, args = [];
@@ -104,6 +105,17 @@ async function shoot(name){
         /* 第一个配置时导出每个区块的文字，供 compare 逐字比对（各配置文字相同） */
         if (config === configs[0]) await dumpText(p, join(out, 'text', page));
         for (const b of blocks){ await shotEl(p, `[data-shot="${b}"]`, join(dir, b + '.png'), e => add(page, config, 'shot-failed', `${b}：${e.message}`)); count++; }
+
+        /* 手机：点顶部细条打开目录弹层，截一屏，再按 Esc 关掉 */
+        const bar = p.locator('.mbar-btn');
+        if (await bar.isVisible()){
+          try {
+            await p.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' })); await settle(p);
+            await bar.click(); await settle(p); await p.waitForTimeout(400);
+            await p.screenshot({ ...SHOT, path: join(dir, 'toc@open.png') }); count++;
+            await p.keyboard.press('Escape'); await p.waitForTimeout(400); await neutral(p);
+          } catch (e){ add(page, config, 'shot-failed', `toc@open：${e.message.split('\n')[0]}`); }
+        }
 
         /* 展开所有问答、名词卡、参考实现 */
         const opened = await withChange(p, async () => {
@@ -182,7 +194,8 @@ function mark(p){
     const names = [];
     const used = new Set();
     const add = (el, n) => {
-      if (!el || el.hasAttribute('data-shot')) return;
+      /* 不显示的不截：只有一页时的翻页、手机上收在弹层里的目录栏（弹层另外截，见 toc@open） */
+      if (!el || el.hasAttribute('data-shot') || !el.checkVisibility({ visibilityProperty: true })) return;
       let k = n, i = 2; while (used.has(k)) k = n + '-' + i++;
       used.add(k); el.setAttribute('data-shot', k); names.push(k);
     };
@@ -244,7 +257,9 @@ async function shotEl(p, sel, path, onError){
     const loc = p.locator(sel).first();
     await loc.evaluate(e => window.scrollTo({ top: Math.max(0, Math.round(e.getBoundingClientRect().top + window.scrollY)), behavior: "instant" }));
     await settle(p);
-    await loc.screenshot({ ...SHOT, style: UNSTICK, path });
+    /* 只让被截的元素（和它所在的章）强制渲染：主题给章节加了 content-visibility:auto，比视口高很多的元素截图时，
+       屏幕外的部分在 Playwright 看来“不可见”，会截成空白（读者滚动时不会）。全部章节都强制渲染会让每次截图都排版整本书，很慢 */
+    await loc.screenshot({ ...SHOT, style: UNSTICK + ` ${sel},section.ch:has(${sel}){content-visibility:visible!important}`, path });
   } catch (e){ if (onError) onError(e); else throw e; }
 }
 

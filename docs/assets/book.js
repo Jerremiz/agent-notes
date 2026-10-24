@@ -7,6 +7,8 @@ window.BOOK = {
   "storageKey": "harness-guide-done",
   "labels": {
    "toc": "章节",
+   "tocOpen": "目录",
+   "tocClose": "关闭目录",
    "progressStart": "已掌握 0 章",
    "progress": "已掌握 {done} / {total} 章",
    "prev": "上一部分",
@@ -31,6 +33,10 @@ window.BOOK = {
   "page": "index",
   "label": "导读",
   "entries": [
+   {
+    "id": "read",
+    "t": "怎么读"
+   },
    {
     "id": "learn",
     "t": "怎么学"
@@ -60,36 +66,24 @@ window.BOOK = {
   {
    "file": "index",
    "title": "首页"
-  },
-  {
-   "file": "part1",
-   "title": "原理"
-  },
-  {
-   "file": "part2",
-   "title": "工程化"
-  },
-  {
-   "file": "part3",
-   "title": "综合"
   }
  ],
  "parts": {
   "原理": {
    "label": "第一部分 · 原理",
-   "page": "part1.html"
+   "page": "index.html"
   },
   "工程": {
    "label": "第二部分 · 工程化",
-   "page": "part2.html"
+   "page": "index.html"
   },
   "综合": {
    "label": "第三部分 · 综合",
-   "page": "part3.html"
+   "page": "index.html"
   },
   "附录": {
    "label": "附录",
-   "page": "part3.html"
+   "page": "index.html"
   }
  },
  "chapters": [
@@ -103,7 +97,7 @@ window.BOOK = {
     "q5"
    ],
    "n": "1",
-   "page": "part1"
+   "page": "index"
   },
   {
    "id": "c2",
@@ -115,7 +109,7 @@ window.BOOK = {
     "q6"
    ],
    "n": "2",
-   "page": "part1"
+   "page": "index"
   },
   {
    "id": "c3",
@@ -126,7 +120,7 @@ window.BOOK = {
     "q1"
    ],
    "n": "3",
-   "page": "part1"
+   "page": "index"
   },
   {
    "id": "c4",
@@ -137,7 +131,7 @@ window.BOOK = {
     "q1"
    ],
    "n": "4",
-   "page": "part1"
+   "page": "index"
   },
   {
    "id": "c5",
@@ -148,7 +142,7 @@ window.BOOK = {
     "q2"
    ],
    "n": "5",
-   "page": "part1"
+   "page": "index"
   },
   {
    "id": "c6",
@@ -159,7 +153,7 @@ window.BOOK = {
     "q2"
    ],
    "n": "6",
-   "page": "part1"
+   "page": "index"
   },
   {
    "id": "c7",
@@ -170,7 +164,7 @@ window.BOOK = {
     "q1"
    ],
    "n": "7",
-   "page": "part1"
+   "page": "index"
   },
   {
    "id": "c8",
@@ -182,7 +176,7 @@ window.BOOK = {
     "q3"
    ],
    "n": "8",
-   "page": "part1"
+   "page": "index"
   },
   {
    "id": "c9",
@@ -195,7 +189,7 @@ window.BOOK = {
     "q6"
    ],
    "n": "9",
-   "page": "part1"
+   "page": "index"
   },
   {
    "id": "c10",
@@ -206,7 +200,7 @@ window.BOOK = {
     "q3"
    ],
    "n": "10",
-   "page": "part2"
+   "page": "index"
   },
   {
    "id": "c11",
@@ -217,7 +211,7 @@ window.BOOK = {
     "q4"
    ],
    "n": "11",
-   "page": "part2"
+   "page": "index"
   },
   {
    "id": "c12",
@@ -229,7 +223,7 @@ window.BOOK = {
     "q4"
    ],
    "n": "12",
-   "page": "part2"
+   "page": "index"
   },
   {
    "id": "c13",
@@ -240,7 +234,7 @@ window.BOOK = {
     "q7"
    ],
    "n": "13",
-   "page": "part2"
+   "page": "index"
   },
   {
    "id": "c14",
@@ -251,7 +245,7 @@ window.BOOK = {
     "q7"
    ],
    "n": "14",
-   "page": "part2"
+   "page": "index"
   },
   {
    "id": "c15",
@@ -262,7 +256,7 @@ window.BOOK = {
     "q6"
    ],
    "n": "15",
-   "page": "part2"
+   "page": "index"
   },
   {
    "id": "c16",
@@ -274,7 +268,7 @@ window.BOOK = {
     "q2"
    ],
    "n": "16",
-   "page": "part2"
+   "page": "index"
   },
   {
    "id": "c17",
@@ -283,7 +277,7 @@ window.BOOK = {
    "imp": "must",
    "q": [],
    "n": "17",
-   "page": "part3"
+   "page": "index"
   },
   {
    "id": "c18",
@@ -292,7 +286,7 @@ window.BOOK = {
    "imp": "aux",
    "q": [],
    "n": "18",
-   "page": "part3"
+   "page": "index"
   },
   {
    "id": "c19",
@@ -301,7 +295,7 @@ window.BOOK = {
    "imp": "aux",
    "q": [],
    "n": "19",
-   "page": "part3"
+   "page": "index"
   },
   {
    "id": "px",
@@ -310,7 +304,7 @@ window.BOOK = {
    "imp": "aux",
    "q": [],
    "n": "附",
-   "page": "part3"
+   "page": "index"
   }
  ],
  "terms": [

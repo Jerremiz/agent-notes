@@ -161,3 +161,16 @@
   .slots{grid-template-columns:repeat(2,minmax(0,1fr))}
   .qmeta div{grid-template-columns:minmax(0,1fr);gap:0}
 }
+
+/* 导读 · 页面上的记号：两列图例，长的条目占整行 */
+.legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 32px;margin-top:28px}
+.legend > div{padding-top:14px;border-top:1px solid var(--line)}
+.legend > .wide{grid-column:1 / -1}
+.legend h4{font-family:var(--f-display);font-size:1rem;font-weight:600;color:var(--ink);margin:0 0 6px}
+.legend p{margin:0;font-size:.9rem;line-height:1.85;color:var(--muted)}
+.legend .marks{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px}
+.legend .marks-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:.9rem;line-height:1.8;color:var(--muted)}
+.legend .marks-list .cf{display:inline-block;min-width:5.4em;text-align:center;margin-right:10px}
+@media (max-width:900px){
+  .legend{grid-template-columns:minmax(0,1fr);gap:22px}
+}

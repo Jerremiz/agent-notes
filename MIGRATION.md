@@ -2,7 +2,7 @@
 
 新对话从这里开始：先读本文件，再读两个仓库的 AGENTS.md。完成一步就在这里勾掉，并补上结论。
 
-## 现状（2026-10-21）
+## 现状（2026-10-21，迁移开始时；留作记录，最新进度看下面的步骤）
 
 - `E:\repo\notes-theme`：主题 + 生成器，1 个提交，没有 remote 和 tag，**第一版还没写完，迁移期间不发布**。
 - `E:\repo\agent-notes`：在未推送的 `md-pilot` 分支，比 `main` 多 1 个提交。依赖 `"notes-theme": "file:../notes-theme"`（node_modules 里是指向主题目录的 junction）。
@@ -30,7 +30,15 @@
 
 - [x] notes-theme 里对 `legacy: true` 页面和 `legacyChapters` 的支持删不删？只用于手写 HTML 页面渐进迁移；agent-notes 已不再使用，在现有主题上继续改或写第二本书都用不到。
   - 结论（2026-10-24）：**删了**。配置里再写 `legacy: true` 或 `legacyChapters` 会明确报“已不再支持”；`pages` 每项只认 `file`、`title`、`part`、`plain`。
-- [ ] 是否把全书合成一个 HTML（目前分 index / part1 / part2 / part3 四页，页面之间有目录栏、翻页和正文里 19 个跨页链接）？用户要求**上线（第 6 步）之前讨论**。要考虑：旧网址 `partN.html#cN` 怎么转到新地址（GitHub Pages 只能靠静态小页面加脚本跳转）、主题生成器和目录栏 / 翻页要怎么改、部分标题是否保留为目录分组。阅读进度按章 id 存，不受影响。
+- [x] 是否把全书合成一个 HTML？合成。理由：全书 gzip 后约 97 KB、约 4600 个元素，一页毫无压力；读者要能用 Ctrl+F 搜全书，这是比自建搜索框更好的做法（中文不用分词、折叠的 `<details>` 在 Chromium 里也能搜到并自动展开）。还没上线，旧网址不用转。
+  - 主题 0.2.0：`pages[i].from` 把几个内容目录按顺序拼成一页，每个目录保留自己的 `_part.md`；目录栏只高亮正在读的那一部分；只有一页时不显示翻页。
+  - 书：`notes.config.mjs` 改成一页，`parts` 全部指向 `index`；正文里 `partN.html#x`、`index.html#x` 改成 `#x`，首页三张部分卡片改链到部分标题 `#a0` / `#b0` / `#d0`。
+  - 性能（Playwright 本地测，取 3 次中位数；手机是 390 宽、CPU 降速 4 倍）：直接合成一页时首屏变慢（桌面 FCP 448 ms，手机 FCP 2.2 s、load 4.0 s，原来 part1 是 308 ms / 1.9 s / 2.3 s），主要是中文排版。主题给 `section.ch` 加 `content-visibility: auto` 以后，桌面 FCP 160 ms，手机 FCP 0.84 s、load 1.37 s，都比原来最大的 part1 快。锚点直开、小节锚点、点目录跳转、往回滚不跳、滚到底目录依次高亮每一章、搜索屏幕外章节的正文，桌面和手机都验过。
+  - 截图脚本：不显示的元素（只有一页时的翻页）不再截；`content-visibility:auto` 下，比视口高很多的章节截图会截成空白（读者滚动时不会，手机上逐屏截了全书 114 屏验证过），所以截图时只对被截的那个元素强制渲染。`demos` 全部挪到 `index` 下。
+  - 修正：点目录跳转不准（从顶部点第 9 章，停在离目标 6900px 的地方）。原因是 CSS 的 `scroll-behavior:smooth` 按屏幕外章节的估计高度算终点，滚动途中各章排版后目标移走了；之前的测试开了“减少动态效果”，没测到平滑滚动。现在由 shell.js 接管本页锚点：远的先瞬移到目标附近，再缓动滚完最后一段，每帧重新量目标位置。桌面、手机各 6 种跳法（章、小节、往前、往后）都停准。
+  - 手机目录改版（参考 VitePress、Stripe、mdBook 的手机文档）：顶部细条显示当前部分和章，底边是阅读进度，往下读时收起；点它从底部弹出目录面板（内容同桌面目录，定位到当前章，小节展开），点遮罩、关闭、Esc、下拉都能关。原来的横向滚动小标签看不到部分、进度和小节，找章要左右划。
+  - 页脚（2026-10-25）：主题的 `footer` 改为 Markdown、空一行分段，样式加了上边线、链接平时是灰色；书的页脚拆成三段（讲什么 / 时效 / 怎么反馈）。
+  - 以后要拆回多页：gzip 后几百 KB、元素一两万个以上、手机上明显变慢的时候。
 
 ## 步骤
 
@@ -114,8 +122,12 @@
 
 ### 6. 发布和上线
 
-- [ ] 建 GitHub 仓库、推送、打 `v0.1.0`；agent-notes 改依赖 `github:Jerremiz/notes-theme#v0.1.0`，提交完整锁文件。
-- [ ] 合并 `md-pilot`，Pages 改从 `/docs` 发布。本地没有 `CNAME`，切换前确认自定义域名 `agent.jeremiz.com` 不会断；检查旧 URL 和阅读进度。
+- [ ] 建 GitHub 仓库、推送、打 `v0.2.0`（全书一页用到了 0.2.0 的 `from`，`v0.1.0` 从没发布过）；agent-notes 改依赖 `github:Jerremiz/notes-theme#v0.2.0`，提交完整锁文件。
+- [ ] 合并 `md-pilot`，上线。现在线上是 Vercel 直接发布 `main` 的仓库根目录（`index.html`、`part1–3.html`）；合并后产物在 `docs/`：
+  - Vercel 项目设置里 Root Directory 改成 `docs`（Framework 选 Other，不构建）。不要让 Vercel 跑 `npm install`：依赖里的 `file:../notes-theme` 在 Vercel 上装不了，改成 `github:` 依赖后也没必要。
+  - 旧网址 `part1.html`、`part2.html`、`part3.html` 合并后是 404。结论（2026-10-25）：**不做重定向**。
+  - 阅读进度：`storageKey` 没变、域名没变，就不会丢。切换前确认自定义域名 `agent.jeremiz.com` 绑在这个 Vercel 项目上。
+- [ ] 上线以后，在一个提交里删掉本文件；长期有用的规则先挪进 AGENTS.md（删了 git 历史里还能找到）。
 
 ## 参考
 

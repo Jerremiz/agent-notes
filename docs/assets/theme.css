@@ -1,5 +1,5 @@
 /* notes-theme · 通用样式
-   版式：左侧固定目录栏（手机上变成顶部横条），右侧一条阅读栏。
+   版式：左侧固定目录栏，右侧一条阅读栏。手机上：顶部细条显示当前位置，点它从底部弹出目录（第 8 节）。
    规则：颜色只用下面的变量；每本书专用的组件写在书自己的 CSS 里，同样只用这些变量。 */
 
 /* ===== 1. 变量 ===== */
@@ -8,6 +8,7 @@
   --accent:#3247CF; --accent-ink:#FFFFFF;
   --violet:#7350E6; --teal:#16788A; --amber:#A86B10; --ok:#17803D; --danger:#C0391B;
   --ref-bg:#F6F7FE; --ref-head:#E7EAFB; --ref-line:#C3CAF2; --ref-ink:#2A3BB8;
+  --scrim:#15202B66;   /* 手机目录弹层后面的遮罩、弹层的投影 */
   --code-bg:#1B2430; --code-ink:#DCE3EC; --code-dim:#7D8BA0; --code-hl:#2D3B55; --code-k:#C3A6FF; --code-s:#9BD48E;
   --f-display:"Songti SC","Noto Serif CJK SC","Source Han Serif SC","PingFang SC","Microsoft YaHei",sans-serif;
   --f-body:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC","WenQuanYi Micro Hei",system-ui,sans-serif;
@@ -21,6 +22,7 @@
   --accent:#8E9CFF; --accent-ink:#0E1319;
   --violet:#B6A2FF; --teal:#5BC4D4; --amber:#E2AA4E; --ok:#4FD27E; --danger:#F2875F;
   --ref-bg:#151B2B; --ref-head:#1C2440; --ref-line:#323E6B; --ref-ink:#A9B4FF;
+  --scrim:#000000A6;
   --code-bg:#0A0F15; --code-ink:#DCE3EC; --code-dim:#6F7E92; --code-hl:#22304A; --code-k:#C3A6FF; --code-s:#9BD48E;
   color-scheme:dark}}
 :root[data-theme="dark"]{
@@ -28,12 +30,17 @@
   --accent:#8E9CFF; --accent-ink:#0E1319;
   --violet:#B6A2FF; --teal:#5BC4D4; --amber:#E2AA4E; --ok:#4FD27E; --danger:#F2875F;
   --ref-bg:#151B2B; --ref-head:#1C2440; --ref-line:#323E6B; --ref-ink:#A9B4FF;
+  --scrim:#000000A6;
   --code-bg:#0A0F15; --code-ink:#DCE3EC; --code-dim:#6F7E92; --code-hl:#22304A; --code-k:#C3A6FF; --code-s:#9BD48E;
   color-scheme:dark}
 
 /* ===== 2. 基础 ===== */
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;background:var(--bg)}
+/* 不用 scroll-behavior:smooth：屏幕外的章还没排版（content-visibility），浏览器按估计高度算好终点，
+   滚动途中各章排版、高度变了，就停错位置。站内跳转的平滑滚动由 shell.js 做，每一帧重新量目标位置 */
+html{background:var(--bg)}
+/* 跳转后焦点移到目标上（读屏软件从这里读起），不画焦点框 */
+[tabindex="-1"]:focus{outline:none}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
 a{color:var(--accent)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
@@ -52,6 +59,7 @@ li{margin:.2em 0}
 main,.rail{min-width:0}
 main{max-width:46em;width:100%}
 
+.mbar,.scrim,.rail .grab,.rail .close{display:none}
 .rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 20px);align-self:start;font-size:.85rem;max-height:calc(100vh - 40px);overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain}
 .rail::-webkit-scrollbar{display:none}
 .rail.fade-b{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 40px),transparent)}
@@ -103,6 +111,11 @@ main{max-width:46em;width:100%}
 
 /* ===== 4. 章节骨架 ===== */
 section.ch{padding-block:56px 8px;border-top:1px solid var(--line)}
+/* 跳到小节时标题上方留一点空（目录里的小节链接） */
+section.ch > h3,section.home-sec > h3{scroll-margin-top:24px}
+/* 全书一页时正文很长：屏幕外的章先不排版（首屏快很多）。Ctrl+F、锚点跳转照常能找到里面的内容；
+   auto 记住每章排过一次的真实高度，滚动条不会来回跳。3000px 是没排过时的估计高度 */
+section.ch{content-visibility:auto;contain-intrinsic-size:auto 3000px}
 .part-head{padding-block:80px 0;border-top:1px solid var(--line)}
 .part-head .eyebrow{color:var(--accent)}
 .part-head h2{font-size:clamp(1.8rem,3.6vw,2.4rem)}
@@ -124,12 +137,20 @@ main > .part-head:first-child{border-top:0;padding-top:28px}
 .understood{margin-top:28px;display:flex;align-items:center;gap:10px;font-size:.9rem;color:var(--muted)}
 .understood input{width:18px;height:18px;accent-color:var(--ok)}
 .pager{display:flex;justify-content:space-between;gap:16px;margin-top:72px;padding-top:20px;border-top:1px solid var(--line)}
+.pager:empty{display:none}   /* 全书只有一页时没有翻页 */
 .pager a{display:flex;flex-direction:column;text-decoration:none;color:var(--ink);padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:9em}
 .pager a:hover{border-color:var(--accent)}
 .pager a.next{margin-left:auto;text-align:right}
 .pager small{color:var(--muted);font-size:.76rem}
 .pager b{font-family:var(--f-display);font-size:1.05rem}
-footer{margin-top:64px;font-size:.82rem;color:var(--muted)}
+/* 页脚：配置里的 footer（Markdown，空一行分段）。和正文之间一条细线；链接不抢眼，悬停才是强调色 */
+footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--line);font-size:.82rem;line-height:1.7;color:var(--muted)}
+footer:empty{display:none}
+.pager:not(:empty) + footer{margin-top:32px;border-top:0;padding-top:0}
+footer p{margin:0 0 .5em;text-wrap:pretty}   /* 避免最后一行只剩一两个字 */
+footer p:last-child{margin-bottom:0}
+footer a{color:inherit;text-decoration-color:color-mix(in srgb,currentColor 45%,transparent);text-underline-offset:3px}
+footer a:hover{color:var(--accent);text-decoration-color:currentColor}
 
 /* ===== 5. 首页 ===== */
 .hero{padding-block:28px 8px}
@@ -316,17 +337,46 @@ td:first-child{white-space:nowrap;font-weight:500}
 /* ===== 8. 手机 ===== */
 @media (max-width:900px){
   .wrap{grid-template-columns:minmax(0,1fr);gap:0;padding-inline:16px;padding-block:0 72px}
-  .rail{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;margin-inline:-16px;padding-inline:16px;border-bottom:1px solid var(--line);max-height:none;overflow:visible}
-  .rail .brand,.rail .sub,.rail .key,.meter{display:none}
-  .rail .head{padding:0 0 6px}
-  .rail a.brand{display:block;border:0;padding:0 0 6px;font-size:1.05rem}
-  .rail .head a.brand{padding:0}
-  .rail a.gh{padding:1px 9px}
-  .rail ol{flex-direction:row;overflow-x:auto;gap:4px;scrollbar-width:none}
-  .rail .part{padding:4px 4px 0 8px;white-space:nowrap;align-self:center}
-  .rail a{white-space:nowrap;padding:3px 10px;border:1px solid var(--line)}
-  .rail ol.subs,.rail li.open > ol.subs{display:none}
-  .rail li.entry > a .n:empty{display:none}
+  /* 顶部细条：当前在哪一部分、哪一章，右边是“目录”按钮，底边一条阅读进度。往下读时收起，往回滚时出现 */
+  :root{--bar-h:52px}
+  .mbar{display:block;position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top,0px);background:color-mix(in srgb,var(--bg) 90%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(12px);backdrop-filter:saturate(1.4) blur(12px);border-bottom:1px solid var(--line);transition:transform .25s ease}
+  .mbar.away{transform:translateY(-100%)}
+  .mbar-btn{display:flex;align-items:center;gap:12px;width:100%;height:var(--bar-h);margin:0;padding:0 16px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .mbar-btn:focus-visible{outline-offset:-4px}
+  .mbar-where{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.3}
+  .mbar-where small,.mbar-where b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mbar-where small{font-family:var(--f-mono);font-size:.64rem;letter-spacing:.08em;color:var(--accent)}
+  .mbar-where b{font-family:var(--f-display);font-weight:700;font-size:1rem;color:var(--ink)}
+  .mbar-where b .n{font-family:var(--f-mono);font-weight:400;font-size:.78em;color:var(--muted);margin-right:.6em}
+  .mbar-open{flex:none;display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted);font-size:.8rem;line-height:1.4}
+  .mbar-btn:active .mbar-open{background:var(--sunk);color:var(--ink)}
+  .mbar-progress{position:absolute;left:0;right:0;bottom:-1px;height:2px}
+  .mbar-progress i{display:block;height:100%;background:var(--accent);transform:scaleX(0);transform-origin:left}
+  /* 跳到小节时，标题不被细条挡住 */
+  section.ch > h3,section.home-sec > h3{scroll-margin-top:calc(var(--bar-h) + 16px)}
+
+  /* 目录：从底部弹出的面板，内容和桌面目录栏相同；当前章展开到小节 */
+  .scrim{display:block;position:fixed;inset:0;z-index:30;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .3s ease}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .rail{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:40;max-height:min(85vh,85dvh);margin:0;padding:0 12px calc(12px + env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border-radius:18px 18px 0 0;box-shadow:0 -10px 40px var(--scrim);font-size:.95rem;visibility:hidden;transform:translateY(100%);transition:transform .32s cubic-bezier(.2,.8,.2,1),visibility 0s linear .32s}
+  .rail.open{visibility:visible;transform:none;transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+  .rail.drag{transition:none}
+  html.sheet-open{overflow:hidden}
+  /* 面板顶部：拖动条 + 书名、共建、关闭，滚动时固定在面板顶上 */
+  .rail .grab{display:block;position:sticky;top:0;z-index:2;height:22px;margin:0 -12px;background:var(--surface)}
+  .rail .grab::before{content:"";position:absolute;left:50%;top:9px;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:var(--line)}
+  .rail .head{position:sticky;top:22px;z-index:2;margin:0 -12px;padding:0 12px 10px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .rail .head .brand{flex:1;font-size:1.1rem}
+  .rail .close{display:grid;place-items:center;flex:none;width:32px;height:32px;margin-left:4px;padding:0;border:0;border-radius:50%;background:var(--sunk);color:var(--muted);cursor:pointer}
+  .rail .sub{margin:10px 0 2px}
+  .rail .key{padding-top:6px}
+  .rail .part{padding:16px 8px 6px}
+  .rail a{padding:8px 10px;border-radius:8px}
+  .rail a.subsec{font-size:.85rem;padding:6px 8px}
+  .rail a.subsec.on::before{top:7px;bottom:7px}
+  .rail .n{font-size:.76rem}
+  /* 已掌握进度：固定在面板底部 */
+  .rail .meter{position:sticky;bottom:calc(-12px - env(safe-area-inset-bottom,0px));margin:12px -12px 0;padding:10px 20px 12px;background:var(--surface);border-top:1px solid var(--line)}
   .hero{padding-top:28px}
   .arch,.parts{grid-template-columns:minmax(0,1fr)}
   .parts{gap:14px}

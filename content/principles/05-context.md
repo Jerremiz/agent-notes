@@ -83,9 +83,9 @@ pi 的 system prompt 由 `system-prompt.ts` 按命名 section 拼装。下面的
 ::: ref 永不在工具结果处切；结构化摘要、增量更新；只追加不删除；溢出时压缩后只重试一次。 | coding-agent/docs/compaction.md · compaction/compaction.ts
 压缩算法的细节，每一条都对应一个实际出过的问题：
 
-- **触发：**`contextTokens > contextWindow − reserveTokens`；多轮运行中在工具结果追加后、下一次请求前（`prepareNextTurn`）检查。
+- **触发：**`contextTokens > contextWindow − reserveTokens`，`reserveTokens` 默认 16384，只决定什么时候开始压缩，摘要请求本身的输出上限按模型来定；多轮运行中在工具结果追加后、下一次请求前（`prepareNextTurn`）检查。
 - **切分点：**从最新往回累计到 `keepRecentTokens`。**永远不在 toolResult 处切**，因为工具结果必须和它的调用在一起，否则厂商会拒绝请求。一般在用户消息边界切；单个用户回合本身就超预算时，在回合中间的 assistant 消息处切，并为前半段单独生成一份摘要再合并。
-- **序列化防“接话”：**送去总结的历史被转成 `[User]: …`、`[Assistant tool calls]: read(path="foo.ts")` 这样的纯文本，避免模型把它当成对话继续下去；每条工具结果只保留前 2000 字符。
+- **序列化防“接话”：**送去总结的历史被转成 `[User]: …`、`[Assistant tool calls]: read(path="foo.ts")` 这样的纯文本，避免模型把它当成对话继续下去；每条工具结果只保留前 2000 字符；thinking 块不放进去（厂商返回的本来就是推理的摘要，带上反而可能让总结请求比原上下文还大）。
 - **结构化摘要：**固定章节 Goal / Constraints & Preferences / Progress（Done、In Progress、Blocked）/ Key Decisions / Next Steps / Critical Context，末尾附 `<read-files>` 和 `<modified-files>`。
 - **增量摘要：**再次压缩时把上一次摘要作为输入，文件列表跨多次压缩累计。
 - **只追加：**写入一条 compaction 记录（摘要 + `firstKeptEntryId` + `tokensBefore`），原记录不删。
@@ -106,7 +106,7 @@ pi 的 system prompt 由 `system-prompt.ts` 按命名 section 拼装。下面的
 :::: qa
 ::: q 对话超过上下文窗口了，怎么办？
 - 先治源头：工具输出截断、大文件分段读、搜索交给子 agent。
-- 再压缩：阈值 = 窗口 − 回复预留；保留最近 N token；结构化摘要；不在工具结果处切分。
+- 再压缩：阈值 = 窗口 − 预留余量；保留最近 N token；结构化摘要；不在工具结果处切分。
 - 原始记录不删，便于审计和回溯。
 - 最后一道保护：溢出错误时压缩后重试一次。
 - 点出代价：丢细节、摘要成本、缓存失效，阈值不能太激进。
@@ -121,9 +121,9 @@ pi 的 system prompt 由 `system-prompt.ts` 按命名 section 拼装。下面的
 ::::
 
 ::: ahead 前瞻 · 本章
-- [已有证据] 窗口在变大，但长上下文的质量衰减被多项研究反复测到（Chroma 的 Context Rot 等），所以上下文仍要调度。
-- [已有证据] Anthropic、OpenAI 都已提供托管的压缩或清理旧结果。harness 多了一个选择：自己实现，或用厂商的并补上审计。
-- [作者判断] 模型会被专门训练去适应压缩后的上下文、甚至自己决定何时压缩（已有厂商把“跨多个上下文窗口连续工作”作为模型卖点，学术界也在做学习型压缩）。到那时，pi 这种手写的切分规则会变薄。
+- [现状] 窗口在变大，但长上下文的质量衰减被多项研究反复测到（Chroma 的 Context Rot 等），所以上下文仍要调度。
+- [现状] Anthropic、OpenAI 都已提供托管的压缩或清理旧结果。harness 多了一个选择：自己实现，或用厂商的并补上审计。
+- [推测] 模型会被专门训练去适应压缩后的上下文、甚至自己决定何时压缩（已有厂商把“跨多个上下文窗口连续工作”作为模型卖点，学术界也在做学习型压缩）。到那时，pi 这种手写的切分规则会变薄。
 - [有争议] “清空上下文 + 结构化交接”和“压缩”哪个更好。不同模型、不同任务结论不同，需要自己评测（第 9 章长任务）。
 :::
 

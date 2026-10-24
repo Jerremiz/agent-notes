@@ -101,9 +101,9 @@ void truncatedToolCallIsNotExecuted() {
 ::::
 
 ::: ahead 前瞻 · 本章
-- [已有证据] SWE-bench Verified 已接近饱和，更难的基准（SWE-bench Pro、Terminal-Bench 2.0）和新的尺子（METR 时间跨度、pass^k）在接替。
-- [已有证据] 评测是 harness 变薄的前提：没有评测，就不知道哪段脚手架可以删。
-- [作者判断] 验证会成为瓶颈：agent 产出代码的速度远超人 review 的速度，自动验证（测试、类型检查、浏览器端到端、LLM 审查）在 harness 里的比重会继续上升。
+- [现状] SWE-bench Verified 已接近饱和，更难的基准（SWE-bench Pro、Terminal-Bench 2.0）和新的尺子（METR 时间跨度、pass^k）在接替。
+- [现状] 评测是 harness 变薄的前提：没有评测，就不知道哪段脚手架可以删。
+- [推测] 验证会成为瓶颈：agent 产出代码的速度远超人 review 的速度，自动验证（测试、类型检查、浏览器端到端、LLM 审查）在 harness 里的比重会继续上升。
 :::
 
 ::: quiz
